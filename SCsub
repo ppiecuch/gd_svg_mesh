@@ -50,7 +50,7 @@ env_vars.Add(EnumVariable(
 	'nopatch',  allowed_values=('patch', 'nopatch')))
 env_vars.Update(env)
 
-if env['svg'] == 'patch':
+if env['svg'] != 'no-patch':
 	declare_vector_sprite = '''
 Node *createVectorSprite(Ref<Resource> p_resource);
 void configureVectorSprite(Node *p_child, Ref<Resource> p_texture);
