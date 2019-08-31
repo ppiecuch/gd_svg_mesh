@@ -29,7 +29,7 @@ static void editor_init_callback() {
 }
 #endif
 
-void register_vector_graphics_types() {
+void register_gd_vector_graphics_types() {
 #if GDTOVE_SVG_RFL
 	svg_loader = memnew(ResourceFormatLoaderSVG);
 	ResourceLoader::add_resource_format_loader(svg_loader);
@@ -51,5 +51,5 @@ void register_vector_graphics_types() {
 #endif
 }
 
-void unregister_vector_graphics_types() {
+void unregister_gd_vector_graphics_types() {
 }

@@ -2,5 +2,5 @@
 /*  register_types.h                                                     */
 /*************************************************************************/
 
-void register_vector_graphics_types();
-void unregister_vector_graphics_types();
+void register_gd_vector_graphics_types();
+void unregister_gd_vector_graphics_types();
