@@ -18,10 +18,15 @@ env_tove.add_source_files(env.modules_sources, "tove2d/src/thirdparty/tinyxml2/t
 import os 
 dir_path = Dir('.').abspath
 
-env_tove.Append(CXXFLAGS=[
-    '-std=c++11',
-    '-DTOVE_GODOT',
-    '-I' + os.path.join(dir_path, 'tove2d/src/thirdparty/fp16/include')])
+if not env.msvc:
+    env_tove.Append(CXXFLAGS=[
+        '-std=c++11',
+        '-DTOVE_GODOT',
+        '-I' + os.path.join(dir_path, 'tove2d/src/thirdparty/fp16/include')])
+else:
+    env_tove.Append(CXXFLAGS=[
+        '-DTOVE_GODOT',
+        '-I' + os.path.join(dir_path, 'tove2d/src/thirdparty/fp16/include')])
 
 def package_sl(target, source, env):
 	with open(source[0].abspath, "r") as sl:
