@@ -5,6 +5,7 @@
 #include "vector_graphics_editor.h"
 
 #include "editor/plugins/canvas_item_editor_plugin.h"
+#include "editor/editor_scale.h"
 #include "core/os/keyboard.h"
 #include "tove2d/src/cpp/mesh/meshifier.h"
 
