@@ -19,7 +19,7 @@
 #endif
 
 #if GDTOVE_SVG_RFL
-static ResourceFormatLoaderSVG *svg_loader = NULL;
+static Ref<ResourceFormatLoaderSVG> svg_loader;
 #endif
 
 #ifdef TOOLS_ENABLED
@@ -31,7 +31,7 @@ static void editor_init_callback() {
 
 void register_gd_vector_graphics_types() {
 #if GDTOVE_SVG_RFL
-	svg_loader = memnew(ResourceFormatLoaderSVG);
+	svg_loader.instance();
 	ResourceLoader::add_resource_format_loader(svg_loader);
 #endif
 
@@ -52,4 +52,8 @@ void register_gd_vector_graphics_types() {
 }
 
 void unregister_gd_vector_graphics_types() {
+#if GDTOVE_SVG_RFL
+	ResourceLoader::remove_resource_format_loader(svg_loader);
+	svg_loader.unref();
+#endif
 }
