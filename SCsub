@@ -3,30 +3,19 @@
 Import('env')
 Import('env_modules')
 
-env_tove = env_modules.Clone()
+env_module = env_modules.Clone()
 
-env_tove.add_source_files(env.modules_sources, "*.cpp")
+sources = Glob("*.cpp")
+sources += Glob("tove2d/src/cpp/*.cpp")
+sources += Glob("tove2d/src/cpp/mesh/*.cpp")
+sources += Glob("tove2d/src/cpp/shader/*.cpp")
+sources += Glob("tove2d/src/cpp/gpux/*.cpp")
+sources += Glob("tove2d/src/thirdparty/*.cpp")
+sources += Glob("tove2d/src/thirdparty/polypartition/src/*.cpp")
+sources += Glob("tove2d/src/thirdparty/tinyxml2/tinyxml2.cpp")
 
-env_tove.add_source_files(env.modules_sources, "tove2d/src/cpp/*.cpp")
-env_tove.add_source_files(env.modules_sources, "tove2d/src/cpp/mesh/*.cpp")
-env_tove.add_source_files(env.modules_sources, "tove2d/src/cpp/shader/*.cpp")
-env_tove.add_source_files(env.modules_sources, "tove2d/src/cpp/gpux/*.cpp")
-env_tove.add_source_files(env.modules_sources, "tove2d/src/thirdparty/*.cpp")
-env_tove.add_source_files(env.modules_sources, "tove2d/src/thirdparty/polypartition/src/*.cpp")
-env_tove.add_source_files(env.modules_sources, "tove2d/src/thirdparty/tinyxml2/tinyxml2.cpp")
-
-import os 
-dir_path = Dir('.').abspath
-
-if not env.msvc:
-    env_tove.Append(CXXFLAGS=[
-        '-std=c++11',
-        '-DTOVE_GODOT',
-        '-I' + os.path.join(dir_path, 'tove2d/src/thirdparty/fp16/include')])
-else:
-    env_tove.Append(CXXFLAGS=[
-        '-DTOVE_GODOT',
-        '-I' + os.path.join(dir_path, 'tove2d/src/thirdparty/fp16/include')])
+env_module.Append(CPPDEFINES=["TOVE_GODOT"])
+env_module.Append(CPPPATH=["tove2d/src/thirdparty/fp16/include"])
 
 def package_sl(target, source, env):
 	with open(source[0].abspath, "r") as sl:
@@ -35,13 +24,18 @@ def package_sl(target, source, env):
 			out.write(sl.read())
 			out.write(')GLSL";\n')
 
-env_tove.Append(BUILDERS={
+env_module.Append(BUILDERS={
 	'PackageSL':Builder(action=package_sl)})
 
-env_tove.PackageSL(
+env_module.PackageSL(
 	'tove2d/src/glsl/fill.frag.inc',
 	Glob('tove2d/src/glsl/fill.frag'))
 
-env_tove.PackageSL(
+env_module.PackageSL(
 	'tove2d/src/glsl/line.vert.inc',
 	Glob('tove2d/src/glsl/line.vert'))
+
+# Compile as a static library
+lib = env_module.Library("gd_vector_graphics", sources)
+# Add the library as a dependency of the final executable
+env.Prepend(LIBS=[lib])
