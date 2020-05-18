@@ -37,24 +37,6 @@ Rendering quality can be changed by editing the VGAdaptiveRenderer's
 quality setting (lower number means less triangles). You can do this
 interactively in the Godot editor.
 
-# The SVG Import Patch
+# Reference
 
-In order to be able to drag and drop SVG assets into the Godot editor
-as vector graphics, you need to make one patch in Godot; take a look at
-the accompanying patches/0001-tovegd-svg-support.patch, which is this:
-
-	In editor/canvas_item_editor_plugin.cpp, add
-
-		Node *createVectorSprite(Ref<Resource> p_resource, Node *p_owner);
-
-	then replace
-
-		child = memnew(Sprite); // default
-
-	with:
-
-		child = createVectorSprite(texture, target_node);
-
-After recompiling, you should now be able to drag and drop an SVG file
-into your Godot FileSystem. From there you can drag it into your scene,
-and all SVG paths should get converted into VGPaths.
+ * check https://github.com/castle-games/castle-client/blob/master/mobile/android/love/src/jni/ghost-extensions/tove2d for some up-to-date source code config

@@ -24,7 +24,9 @@ static Ref<Image> tove_graphics_rasterize(
 	const ToveRasterizeSettings *defaultSettings = tove::nsvg::getDefaultRasterizeSettings();
 	if (defaultSettings) {
 		ToveRasterizeSettings settings = *defaultSettings;
-		settings.quality = p_hq ? 1 : 0;
+        if (p_hq) {
+            // TODO: settings.quality
+        }
 		PoolVector<uint8_t>::Write dw = dst_image.write();
 		p_tove_graphics->rasterize(&dw[0], p_width, p_height, w * 4, p_tx, p_ty, p_scale, &settings);
 	}
@@ -56,7 +58,7 @@ void VGSpriteRenderer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "quality", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_quality", "get_quality");
 }
 
-Rect2 VGSpriteRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq) {
+Rect2 VGSpriteRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
 
     // const float resolution = quality;
     tove::GraphicsRef graphics = p_path->get_subtree_graphics();

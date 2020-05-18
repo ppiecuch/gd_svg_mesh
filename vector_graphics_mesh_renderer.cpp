@@ -44,12 +44,15 @@ public:
                 if (meshRenderer.is_valid()) {
                     tove::TesselatorRef tesselator = meshRenderer->get_tesselator();
                     if (tesselator) {
+                        tove::PaintIndex it;
+                        auto tove_path = path->get_tove_path();
                         Size2 s = path->get_global_transform().get_scale();
                         tesselator->beginTesselate(root_graphics.get(), MAX(s.width, s.height));
 
                         tesselator->pathToMesh(
                             UPDATE_MESH_EVERYTHING,
-                            new_transformed_path(path->get_tove_path(), p_transform),
+                            new_transformed_path(tove_path, p_transform), 0,
+                            tove_path->createPaintIndices(it),
                             tove_mesh, tove_mesh,
                             fill_index, line_index);
 
@@ -64,7 +67,7 @@ public:
 VGAbstractMeshRenderer::VGAbstractMeshRenderer() {
 }
 
-Rect2 VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq) {
+Rect2 VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
 	
     clear_mesh(p_mesh);
 
@@ -74,15 +77,15 @@ Rect2 VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> 
     tove::MeshRef tove_mesh;
     
     if (p_hq && !subtree_graphics->areColorsSolid()) {
-        tove_mesh = tove::tove_make_shared<tove::PaintMesh>();
+        tove_mesh = tove::tove_make_shared<tove::PaintMesh>(tove::NameRef());
     } else {
-        tove_mesh = tove::tove_make_shared<tove::ColorMesh>();
+        tove_mesh = tove::tove_make_shared<tove::ColorMesh>(tove::NameRef());
     }
     
     Renderer r(tove_mesh, subtree_graphics);
     r.traverse(p_path, Transform2D());
 
-    r_material = copy_mesh(p_mesh, tove_mesh, subtree_graphics, r_texture);
+    r_material = copy_mesh(p_mesh, tove_mesh, subtree_graphics, r_texture, p_spatial);
 
     return tove_bounds_to_rect2(p_path->get_tove_path()->getBounds());
 }

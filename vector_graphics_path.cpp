@@ -151,7 +151,7 @@ void VGPath::import_svg(const String &p_path) {
 
 		std::string name = tove_path->getName();
 		if (name.empty()) {
-			name = "path";
+			name = "Path";
 		}
 
 		path->set_name(String(name.c_str()));
@@ -276,7 +276,7 @@ void VGPath::update_mesh_representation() {
 		if (renderer.is_valid()) {
 			Ref<Material> ignored_material; // ignored
 			Ref<Texture> ignored_texture; // ignored
-			renderer->render_mesh(mesh, ignored_material, ignored_texture, this, false);
+			renderer->render_mesh(mesh, ignored_material, ignored_texture, this, false, false);
 			texture = renderer->render_texture(this, false);
 		}
 	}
@@ -739,7 +739,7 @@ Node2D *VGPath::create_mesh_node() {
 			mesh.instance();
 			Ref<Material> material;
 			Ref<Texture> texture;
-			renderer->render_mesh(mesh, material, texture, this, true);
+			renderer->render_mesh(mesh, material, texture, this, true, false);
 			mesh_inst->set_mesh(mesh);
 			if (material.is_valid()) {
 				mesh_inst->set_material(material);
