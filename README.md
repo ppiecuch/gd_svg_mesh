@@ -40,3 +40,4 @@ interactively in the Godot editor.
 # Reference
 
  * check https://github.com/castle-games/castle-client/blob/master/mobile/android/love/src/jni/ghost-extensions/tove2d for some up-to-date source code config
+ * https://github.com/godot-extended-libraries/godot_vector_graphics.git for updats and extensions (Lottie importer)
