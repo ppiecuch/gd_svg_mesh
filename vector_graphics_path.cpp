@@ -820,8 +820,7 @@ VGPath *VGPath::create_from_svg(Ref<Resource> p_resource) {
 }
 
 Node *createVectorSprite(Ref<Resource> p_resource) {
-	VGPath *path = VGPath::create_from_svg(p_resource);
-	if (path) {
+	if (VGPath *path = VGPath::create_from_svg(p_resource)) {
 		return path;
 	} else {
 		return memnew(Sprite); // not a vector file

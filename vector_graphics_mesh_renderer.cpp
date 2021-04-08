@@ -15,6 +15,7 @@ class Renderer {
 
 public:
     Renderer(const tove::MeshRef &p_tove_mesh, const tove::GraphicsRef &p_root_graphics) {
+
         fill_index = 0;
         line_index = 0;
         tove_mesh = p_tove_mesh;
@@ -22,6 +23,7 @@ public:
     }
 
     void traverse(Node *p_node, const Transform2D &p_transform) {
+
         const int n = p_node->get_child_count();
         for (int i = 0; i < n; i++) {
             Node *child = p_node->get_child(i);
@@ -46,7 +48,7 @@ public:
                     if (tesselator) {
                         tove::PaintIndex it;
                         auto tove_path = path->get_tove_path();
-                        Size2 s = path->get_global_transform().get_scale();
+                        Size2 s = path->is_inside_tree() ? path->get_global_transform().get_scale() : path->get_transform().get_scale();
                         tesselator->beginTesselate(root_graphics.get(), MAX(s.width, s.height));
 
                         tesselator->pathToMesh(
@@ -63,9 +65,6 @@ public:
         }
     }
 };
-
-VGAbstractMeshRenderer::VGAbstractMeshRenderer() {
-}
 
 Rect2 VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
 	
@@ -91,5 +90,9 @@ Rect2 VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> 
 }
 
 Ref<ImageTexture> VGAbstractMeshRenderer::render_texture(VGPath *p_path, bool p_hq) {
+
     return Ref<ImageTexture>();
+}
+
+VGAbstractMeshRenderer::VGAbstractMeshRenderer() {
 }
