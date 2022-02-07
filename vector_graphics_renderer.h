@@ -11,7 +11,7 @@
 class VGPath;
 
 class VGRenderer : public Resource {
-	GDCLASS(VGRenderer, Resource);
+    GDCLASS(VGRenderer, Resource);
 
 protected:
     static void clear_mesh(Ref<ArrayMesh> &p_mesh);
@@ -21,8 +21,7 @@ public:
         return false;
     }
 
-    virtual Rect2 render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
-        return Rect2();
+    virtual void render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
     }
 
     virtual Ref<ImageTexture> render_texture(VGPath *p_path, bool p_hq) {

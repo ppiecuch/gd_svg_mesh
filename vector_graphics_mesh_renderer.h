@@ -12,7 +12,7 @@ class VGAbstractMeshRenderer : public VGRenderer {
 protected:
     tove::TesselatorRef tesselator;
 
-	static void _bind_methods();
+    static void _bind_methods();
 
 public:
     VGAbstractMeshRenderer();
@@ -21,7 +21,7 @@ public:
         return tesselator;
     }
 
-    virtual Rect2 render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial = false);
+    virtual void render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial = false);
     virtual Ref<ImageTexture> render_texture(VGPath *p_path, bool p_hq);
 
     virtual bool is_dirty_on_transform_change() const {

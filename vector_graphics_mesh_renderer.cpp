@@ -66,7 +66,7 @@ public:
     }
 };
 
-Rect2 VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
+void VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
 	
     clear_mesh(p_mesh);
 
@@ -85,8 +85,6 @@ Rect2 VGAbstractMeshRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> 
     r.traverse(p_path, Transform2D());
 
     r_material = copy_mesh(p_mesh, tove_mesh, subtree_graphics, r_texture, p_spatial);
-
-    return tove_bounds_to_rect2(p_path->get_tove_path()->getBounds());
 }
 
 Ref<ImageTexture> VGAbstractMeshRenderer::render_texture(VGPath *p_path, bool p_hq) {

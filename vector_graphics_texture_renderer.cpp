@@ -58,7 +58,7 @@ void VGSpriteRenderer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "quality", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_quality", "get_quality");
 }
 
-Rect2 VGSpriteRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
+void VGSpriteRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial) {
 
     // const float resolution = quality;
     tove::GraphicsRef graphics = p_path->get_subtree_graphics();
@@ -72,10 +72,10 @@ Rect2 VGSpriteRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_mat
 	PoolVector<float> tangents;
 	PoolVector<Vector2> uvs;
 
-	ERR_FAIL_COND_V(faces.resize(6) != OK, Rect2());
-	ERR_FAIL_COND_V(normals.resize(6) != OK, Rect2());
-	ERR_FAIL_COND_V(tangents.resize(6 * 4), Rect2());
-	ERR_FAIL_COND_V(uvs.resize(6), Rect2());
+	ERR_FAIL_COND(faces.resize(6) != OK);
+	ERR_FAIL_COND(normals.resize(6) != OK);
+	ERR_FAIL_COND(tangents.resize(6 * 4));
+	ERR_FAIL_COND(uvs.resize(6));
 
     Vector2 position = Vector2(bounds[0], bounds[1]);
     Vector2 size = Size2(w, h);
@@ -113,7 +113,7 @@ Rect2 VGSpriteRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_mat
 	}
 
     Array arr;
-    ERR_FAIL_COND_V(arr.resize(Mesh::ARRAY_MAX), Rect2());
+    ERR_FAIL_COND(arr.resize(Mesh::ARRAY_MAX));
 
 	arr[VS::ARRAY_VERTEX] = faces;
 	arr[VS::ARRAY_NORMAL] = normals;
@@ -122,8 +122,6 @@ Rect2 VGSpriteRenderer::render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_mat
 
 	clear_mesh(p_mesh);
 	p_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arr);
-
-    return tove_bounds_to_rect2(p_path->get_tove_path()->getExactBounds());
 }
 
 Ref<ImageTexture> VGSpriteRenderer::render_texture(VGPath *p_path, bool p_hq) {
