@@ -85,7 +85,7 @@ Ref<ShaderMaterial> copy_mesh(
 	Ref<Material> material;
 
 	if (isPaintMesh) {
-		auto feed = tove::tove_make_shared<tove::ColorFeed>(p_graphics, 1.0f);
+		auto feed = tove::tove_make_shared<tove::ColorFeed>(p_graphics, 1);
 		TovePaintColorAllocation alloc = feed->getColorAllocation();
 		const int matrix_rows = 3;
 		const int npaints = alloc.numPaints;
@@ -94,14 +94,14 @@ Ref<ShaderMaterial> copy_mesh(
 		ERR_FAIL_COND_V(matrix_data.resize(alloc.numPaints * 3 * matrix_rows) != OK, Ref<ShaderMaterial>());
 		PoolVector<float>::Write matrix_data_write = matrix_data.write();
 		for (int i = 0; i < alloc.numPaints * 3 * matrix_rows; i++) {
-			matrix_data_write[i] = 0.0f;
+			matrix_data_write[i] = 0;
 		}
 
 		PoolVector<float> arguments_data;
 		ERR_FAIL_COND_V(arguments_data.resize(alloc.numPaints) != OK, Ref<ShaderMaterial>());
 		PoolVector<float>::Write arguments_data_write = arguments_data.write();
 		for (int i = 0; i < alloc.numPaints; i++) {
-			arguments_data_write[i] = 0.0f;
+			arguments_data_write[i] = 0;
 		}
 
 		PoolVector<uint8_t> pixels;
@@ -119,7 +119,7 @@ Ref<ShaderMaterial> copy_mesh(
 		gradientData.colorsTextureRowBytes = npaints * 4;
 		gradientData.colorsTextureHeight = alloc.numColors;
 
-		feed->bind(gradientData);
+		feed->bindPaintIndices(gradientData);
 		feed->beginUpdate();
 		feed->endUpdate();
 
@@ -133,7 +133,7 @@ Ref<ShaderMaterial> copy_mesh(
 			for (int i = 0; i < n; i++) {
 				const float *p = (float *)(vertices + i * stride);
 				int paint_index = p[2];
-				w[i] = Vector2((paint_index + 0.5f) / npaints, 0.0f);
+				w[i] = Vector2((paint_index + 0.5) / npaints, 0);
 				paint_seen.write[paint_index] = 1;
 			}
 		}

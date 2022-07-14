@@ -16,7 +16,7 @@ sources += Glob("tove2d/src/thirdparty/polypartition/src/*.cpp")
 sources += Glob("tove2d/src/thirdparty/tinyxml2/tinyxml2.cpp")
 
 env_module.Append(CPPDEFINES=["TOVE_GODOT"])
-env_module.Append(CPPPATH=[os.path.realpath(os.curdir), "tove2d/src/thirdparty/fp16/include"])
+env_module.Append(CPPPATH=[os.path.realpath(os.curdir), "#modules/gdextensions", "tove2d/src/thirdparty/fp16/include"])
 
 
 def package_sl(target, source, env):

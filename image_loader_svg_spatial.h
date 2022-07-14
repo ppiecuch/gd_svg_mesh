@@ -9,6 +9,7 @@
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/surface_tool.h"
 #include "scene/resources/texture.h"
+#include "common/gd_core.h"
 #include "vector_graphics_adaptive_renderer.h"
 #include "vector_graphics_path.h"
 
@@ -39,12 +40,10 @@ public:
 };
 
 String ResourceImporterSVGSpatial::get_importer_name() const {
-
 	return "svgspatial";
 }
 
 String ResourceImporterSVGSpatial::get_visible_name() const {
-
 	return "SVGSpatial";
 }
 
@@ -58,31 +57,28 @@ String ResourceImporterSVGSpatial::get_save_extension() const {
 }
 
 String ResourceImporterSVGSpatial::get_resource_type() const {
-
 	return "PackedScene";
 }
 
 bool ResourceImporterSVGSpatial::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
-
 	return true;
 }
 
 int ResourceImporterSVGSpatial::get_preset_count() const {
 	return 0;
 }
-String ResourceImporterSVGSpatial::get_preset_name(int p_idx) const {
 
+String ResourceImporterSVGSpatial::get_preset_name(int p_idx) const {
 	return String();
 }
 
-void ResourceImporterSVGSpatial::get_import_options(List<ImportOption> *r_options, int p_preset) const {
-}
+void ResourceImporterSVGSpatial::get_import_options(List<ImportOption> *r_options, int p_preset) const { }
 
 Error ResourceImporterSVGSpatial::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	Spatial *root = memnew(Spatial);
 
 	String units = "px";
-	float dpi = 96.0;
+	const float dpi = 96.0;
 
 	Vector<uint8_t> buf = FileAccess::get_file_as_array(p_source_file);
 
@@ -93,33 +89,30 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 	String str;
 	str.parse_utf8((const char *)buf.ptr(), buf.size());
 
-	tove::GraphicsRef tove_graphics = tove::Graphics::createFromSVG(
-			str.utf8().ptr(), units.utf8().ptr(), dpi);
+	tove::GraphicsRef tove_graphics = tove::Graphics::createFromSVG(str.utf8().ptr(), units.utf8().ptr(), dpi);
 	{
 		const float *bounds = tove_graphics->getBounds();
-		float s = 256.0f / MAX(bounds[2] - bounds[0], bounds[3] - bounds[1]);
-		if (s > 1.0f) {
+		const float s = 256.0 / MAX(bounds[2] - bounds[0], bounds[3] - bounds[1]);
+		if (s > 1) {
 			tove::nsvg::Transform transform(s, 0, 0, 0, s, 0);
 			transform.setWantsScaleLineWidth(true);
 			tove_graphics->set(tove_graphics, transform);
 		}
 	}
-	int32_t n = tove_graphics->getNumPaths();
-	Ref<VGMeshRenderer> renderer;
-	renderer.instance();
+	const int32_t n = tove_graphics->getNumPaths();
+	print_verbose(vformat("Processing %d paths ...", n));
+	Ref<VGMeshRenderer> renderer = newref(VGMeshRenderer);
 	renderer->set_quality(0.4);
 	VGPath *root_path = memnew(VGPath(tove::tove_make_shared<tove::Path>()));
 	root->add_child(root_path);
 	root_path->set_owner(root);
 	root_path->set_renderer(renderer);
-	Ref<SurfaceTool> st;
-	st.instance();
+	Ref<SurfaceTool> st = newref(SurfaceTool);
 	bool is_merged = true;
 	if (is_merged) {
 		Ref<ArrayMesh> combined_mesh;
 		combined_mesh.instance();
-		Ref<SurfaceTool> st;
-		st.instance();
+		Ref<SurfaceTool> st = newref(SurfaceTool);
 		for (int i = 0; i < n; i++) {
 			tove::PathRef tove_path = tove_graphics->getPath(i);
 			Point2 center = compute_center(tove_path);
@@ -128,21 +121,19 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 			path->set_position(center);
 			root_path->add_child(path);
 			path->set_owner(root);
-			Ref<ArrayMesh> mesh;
-			mesh.instance();
+			Ref<ArrayMesh> mesh = newref(ArrayMesh);
 			Ref<Texture> texture;
 			Ref<Material> renderer_material;
 			renderer->render_mesh(mesh, renderer_material, texture, path, true, true);
 			Transform xform;
-			real_t gap = i * CMP_POINT_IN_PLANE_EPSILON * 16.0f;
-			xform.origin = Vector3(center.x * 0.001f, center.y * -0.001f, gap);
+			const real_t gap = i * CMP_POINT_IN_PLANE_EPSILON * 16.0;
+			xform.origin = Vector3(center.x * 0.001, center.y * -0.001, gap);
 			st->append_from(mesh, 0, xform);
 		}
 		combined_mesh = st->commit();
 		MeshInstance *mesh_inst = memnew(MeshInstance);
 		memdelete(root_path);
-		Ref<SpatialMaterial> mat;
-		mat.instance();
+		Ref<SpatialMaterial> mat = newref(SpatialMaterial);
 		mat->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		mat->set_cull_mode(SpatialMaterial::CULL_DISABLED);
 		combined_mesh->surface_set_material(0, mat);
@@ -167,18 +158,16 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 			path->set_position(center);
 			root_path->add_child(path);
 			path->set_owner(root);
-			Ref<ArrayMesh> mesh;
-			mesh.instance();
+			Ref<ArrayMesh> mesh = newref(ArrayMesh);
 			Ref<Texture> texture;
 			Ref<Material> renderer_material;
 			renderer->render_mesh(mesh, renderer_material, texture, path, true, true);
 			Transform xform;
-			real_t gap = mesh_i * CMP_POINT_IN_PLANE_EPSILON * 16.0f;
+			const real_t gap = mesh_i * CMP_POINT_IN_PLANE_EPSILON * 16.0;
 			MeshInstance *mesh_inst = memnew(MeshInstance);
-			mesh_inst->translate(Vector3(center.x * 0.001f, -center.y * 0.001f, gap));
+			mesh_inst->translate(Vector3(center.x * 0.001, -center.y * 0.001, gap));
 			if (renderer_material.is_null()) {
-				Ref<SpatialMaterial> mat;
-				mat.instance();
+				Ref<SpatialMaterial> mat = newref(SpatialMaterial);
 				mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 				mat->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 				mat->set_cull_mode(SpatialMaterial::CULL_DISABLED);
@@ -197,21 +186,18 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 		}
 		Vector3 translate = bounds.get_size();
 		translate.x = -translate.x;
-		translate.x += translate.x / 2.0f;
+		translate.x += translate.x / 2.0;
 		translate.y += translate.y;
 		spatial->translate(translate);
 		memdelete(root_path);
 	}
-	Ref<PackedScene> vg_scene;
-	vg_scene.instance();
+	Ref<PackedScene> vg_scene = newref(PackedScene);
 	vg_scene->pack(root);
 	String save_path = p_save_path + ".scn";
 	r_gen_files->push_back(save_path);
 	return ResourceSaver::save(save_path, vg_scene);
 }
 
-ResourceImporterSVGSpatial::ResourceImporterSVGSpatial() {
-}
+ResourceImporterSVGSpatial::ResourceImporterSVGSpatial() { }
 
-ResourceImporterSVGSpatial::~ResourceImporterSVGSpatial() {
-}
+ResourceImporterSVGSpatial::~ResourceImporterSVGSpatial() { }
