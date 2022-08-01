@@ -3,6 +3,7 @@
 #include "core/io/resource_importer.h"
 #include "core/io/resource_saver.h"
 #include "core/os/file_access.h"
+#include "editor/editor_node.h"
 #include "editor/editor_file_system.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/resources/mesh_data_tool.h"
@@ -100,7 +101,8 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 		}
 	}
 	const int32_t n = tove_graphics->getNumPaths();
-	print_verbose(vformat("Processing %d paths ...", n));
+	print_verbose(vformat("[SVG] Processing %d paths ...", n));
+	EditorProgress progress("import", TTR("Importing Vector Graphics"), n + 2);
 	Ref<VGMeshRenderer> renderer = newref(VGMeshRenderer);
 	renderer->set_quality(0.4);
 	VGPath *root_path = memnew(VGPath(tove::tove_make_shared<tove::Path>()));
@@ -114,6 +116,7 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 		combined_mesh.instance();
 		Ref<SurfaceTool> st = newref(SurfaceTool);
 		for (int i = 0; i < n; i++) {
+			progress.step(TTR("Importing and Merge Paths..."), i);
 			tove::PathRef tove_path = tove_graphics->getPath(i);
 			Point2 center = compute_center(tove_path);
 			tove_path->set(tove_path, tove::nsvg::Transform(1, 0, -center.x, 0, 1, -center.y));
@@ -130,6 +133,7 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 			xform.origin = Vector3(center.x * 0.001, center.y * -0.001, gap);
 			st->append_from(mesh, 0, xform);
 		}
+		progress.step(TTR("Finalizing..."), n);
 		combined_mesh = st->commit();
 		MeshInstance *mesh_inst = memnew(MeshInstance);
 		memdelete(root_path);
@@ -151,6 +155,7 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 		spatial->set_owner(root);
 		AABB bounds;
 		for (int mesh_i = 0; mesh_i < n; mesh_i++) {
+			progress.step(TTR("Importing Paths..."), mesh_i);
 			tove::PathRef tove_path = tove_graphics->getPath(mesh_i);
 			Point2 center = compute_center(tove_path);
 			tove_path->set(tove_path, tove::nsvg::Transform(1, 0, -center.x, 0, 1, -center.y));
@@ -184,6 +189,7 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 			spatial->add_child(mesh_inst);
 			mesh_inst->set_owner(root);
 		}
+		progress.step(TTR("Finalizing..."), n);
 		Vector3 translate = bounds.get_size();
 		translate.x = -translate.x;
 		translate.x += translate.x / 2.0;
@@ -191,6 +197,7 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 		spatial->translate(translate);
 		memdelete(root_path);
 	}
+	progress.step(TTR("Saving..."), n + 1);
 	Ref<PackedScene> vg_scene = newref(PackedScene);
 	vg_scene->pack(root);
 	String save_path = p_save_path + ".scn";
