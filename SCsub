@@ -29,8 +29,8 @@ def package_sl(target, source, env):
 
 env_module.Append(BUILDERS={"PackageSL": Builder(action=package_sl)})
 
-env_module.PackageSL("tove2d/src/glsl/fill.frag.inc", Glob("tove2d/src/glsl/fill.frag"))
-env_module.PackageSL("tove2d/src/glsl/line.vert.inc", Glob("tove2d/src/glsl/line.vert"))
+env_module.PackageSL("thirdparty/tove2d/src/glsl/fill.frag.inc", Glob("thirdparty/tove2d/src/glsl/fill.frag"))
+env_module.PackageSL("thirdparty/tove2d/src/glsl/line.vert.inc", Glob("thirdparty/tove2d/src/glsl/line.vert"))
 
 # Compile as a static library
 lib = env_module.Library("gd_vector_graphics", sources)
