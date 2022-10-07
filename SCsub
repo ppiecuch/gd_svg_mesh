@@ -7,16 +7,16 @@ Import("env_modules")
 env_module = env_modules.Clone()
 
 sources = Glob("*.cpp")
-sources += Glob("tove2d/src/cpp/*.cpp")
-sources += Glob("tove2d/src/cpp/mesh/*.cpp")
-sources += Glob("tove2d/src/cpp/shader/*.cpp")
-sources += Glob("tove2d/src/cpp/gpux/*.cpp")
-sources += Glob("tove2d/src/thirdparty/*.cpp")
-sources += Glob("tove2d/src/thirdparty/polypartition/src/*.cpp")
-sources += Glob("tove2d/src/thirdparty/tinyxml2/tinyxml2.cpp")
+sources += Glob("thirdparty/tove2d/src/cpp/*.cpp")
+sources += Glob("thirdparty/tove2d/src/cpp/mesh/*.cpp")
+sources += Glob("thirdparty/tove2d/src/cpp/shader/*.cpp")
+sources += Glob("thirdparty/tove2d/src/cpp/gpux/*.cpp")
+sources += Glob("thirdparty/tove2d/src/thirdparty/*.cpp")
+sources += Glob("thirdparty/tove2d/src/thirdparty/polypartition/src/*.cpp")
+sources += Glob("thirdparty/tove2d/src/thirdparty/tinyxml2/tinyxml2.cpp")
 
 env_module.Append(CPPDEFINES=["TOVE_GODOT"])
-env_module.Append(CPPPATH=[os.path.realpath(os.curdir), "#modules/gdextensions", "tove2d/src/thirdparty/fp16/include"])
+env_module.Append(CPPPATH=[os.path.realpath(os.curdir), "#modules/gdextensions", "thirdparty", "thirdparty/tove2d/src/thirdparty/fp16/include"])
 
 
 def package_sl(target, source, env):
@@ -30,7 +30,6 @@ def package_sl(target, source, env):
 env_module.Append(BUILDERS={"PackageSL": Builder(action=package_sl)})
 
 env_module.PackageSL("tove2d/src/glsl/fill.frag.inc", Glob("tove2d/src/glsl/fill.frag"))
-
 env_module.PackageSL("tove2d/src/glsl/line.vert.inc", Glob("tove2d/src/glsl/line.vert"))
 
 # Compile as a static library
