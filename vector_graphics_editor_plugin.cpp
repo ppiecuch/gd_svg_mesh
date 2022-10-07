@@ -41,9 +41,7 @@ VGEditorPlugin::VGEditorPlugin(EditorNode *p_node) {
 
 	editor = p_node;
 	vg_editor = memnew(VGEditor(p_node));
-	//vg_toolbar = memnew(VGEditor(p_node));
 	klass = "VGPath";
-	//CanvasItemEditor::get_singleton()->get_bottom_split()->add_child(vg_editor);
 	CanvasItemEditor::get_singleton()->add_control_to_menu_panel(vg_editor);
 
     vg_editor->hide();
