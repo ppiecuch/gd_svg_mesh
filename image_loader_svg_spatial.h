@@ -52,6 +52,8 @@ String ResourceImporterSVGSpatial::get_visible_name() const {
 void ResourceImporterSVGSpatial::get_recognized_extensions(List<String> *p_extensions) const {
 	p_extensions->push_back("vg-svg");
 	p_extensions->push_back("vg-svgz");
+	p_extensions->push_back("vg.svg");
+	p_extensions->push_back("vg.svgz");
 }
 
 String ResourceImporterSVGSpatial::get_save_extension() const {
@@ -77,8 +79,6 @@ String ResourceImporterSVGSpatial::get_preset_name(int p_idx) const {
 void ResourceImporterSVGSpatial::get_import_options(List<ImportOption> *r_options, int p_preset) const { }
 
 Error ResourceImporterSVGSpatial::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
-	Spatial *root = memnew(Spatial);
-
 	String units = "px";
 	const float dpi = 96;
 
@@ -106,6 +106,7 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 	EditorProgress progress("import", TTR("Importing Vector Graphics"), n + 2);
 	Ref<VGMeshRenderer> renderer = newref(VGMeshRenderer);
 	renderer->set_quality(0.4);
+	Spatial *root = memnew(Spatial);
 	VGPath *root_path = memnew(VGPath(tove::tove_make_shared<tove::Path>()));
 	root->add_child(root_path);
 	root_path->set_owner(root);
@@ -137,7 +138,6 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 		progress.step(TTR("Finalizing..."), n);
 		combined_mesh = st->commit();
 		MeshInstance *mesh_inst = memnew(MeshInstance);
-		memdelete(root_path);
 		Ref<SpatialMaterial> mat = newref(SpatialMaterial);
 		mat->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		mat->set_cull_mode(SpatialMaterial::CULL_DISABLED);
@@ -196,7 +196,6 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 		translate.x += translate.x / 2.0;
 		translate.y += translate.y;
 		spatial->translate(translate);
-		memdelete(root_path);
 	}
 	progress.step(TTR("Saving..."), n + 1);
 	Ref<PackedScene> vg_scene = newref(PackedScene);

@@ -4,7 +4,9 @@
 #include "core/io/resource_importer.h"
 #include "core/io/resource_saver.h"
 #include "core/os/file_access.h"
+#include "common/gd_core.h"
 #include "editor/editor_file_system.h"
+#include "editor/editor_node.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/texture.h"
@@ -49,6 +51,8 @@ String ResourceImporterSVGNode2D::get_visible_name() const {
 void ResourceImporterSVGNode2D::get_recognized_extensions(List<String> *p_extensions) const {
 	p_extensions->push_back("vg-svg");
 	p_extensions->push_back("vg-svgz");
+	p_extensions->push_back("vg.svg");
+	p_extensions->push_back("vg.svgz");
 }
 
 String ResourceImporterSVGNode2D::get_save_extension() const {
@@ -75,8 +79,6 @@ void ResourceImporterSVGNode2D::get_import_options(List<ImportOption> *r_options
 }
 
 Error ResourceImporterSVGNode2D::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
-	Node2D *root = memnew(Node2D);
-
 	String units = "px";
 	const float dpi = 100;
 
@@ -102,13 +104,15 @@ Error ResourceImporterSVGNode2D::import(const String &p_source_file, const Strin
 	}
 	int32_t n = tove_graphics->getNumPaths();
 	print_verbose(vformat("[SVG] Processing %d paths ...", n));
-	Ref<VGMeshRenderer> renderer;
-	renderer.instance();
+	EditorProgress progress("import", TTR("Importing Vector Graphics"), n + 2);
+	Ref<VGMeshRenderer> renderer = newref(VGMeshRenderer);
+	Node2D *root = memnew(Node2D);
 	VGPath *root_path = memnew(VGPath(tove::tove_make_shared<tove::Path>()));
 	root->add_child(root_path);
 	root_path->set_owner(root);
 	root_path->set_renderer(renderer);
 	for (int i = 0; i < n; i++) {
+		progress.step(TTR("Importing Paths..."), i);
 		tove::PathRef tove_path = tove_graphics->getPath(i);
 		Point2 center = compute_center(tove_path);
 		tove_path->set(tove_path, tove::nsvg::Transform(1, 0, -center.x, 0, 1, -center.y));
@@ -138,9 +142,8 @@ Error ResourceImporterSVGNode2D::import(const String &p_source_file, const Strin
 		root->add_child(mesh_inst);
 		mesh_inst->set_owner(root);
 	}
-	memdelete(root_path);
-	Ref<PackedScene> vg_scene;
-	vg_scene.instance();
+	progress.step(TTR("Saving..."), n);
+	Ref<PackedScene> vg_scene = newref(PackedScene);
 	vg_scene->pack(root);
 	String save_path = p_save_path + ".scn";
 	r_gen_files->push_back(save_path);
