@@ -50,8 +50,8 @@ String ResourceImporterSVGSpatial::get_visible_name() const {
 }
 
 void ResourceImporterSVGSpatial::get_recognized_extensions(List<String> *p_extensions) const {
-	p_extensions->push_back("svg");
-	p_extensions->push_back("svgz");
+	p_extensions->push_back("vg-svg");
+	p_extensions->push_back("vg-svgz");
 }
 
 String ResourceImporterSVGSpatial::get_save_extension() const {
@@ -80,7 +80,7 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 	Spatial *root = memnew(Spatial);
 
 	String units = "px";
-	const float dpi = 96.0;
+	const float dpi = 96;
 
 	Vector<uint8_t> buf = FileAccess::get_file_as_array(p_source_file);
 

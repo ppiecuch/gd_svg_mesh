@@ -46,8 +46,8 @@ String ResourceImporterSVGVGPath::get_visible_name() const {
 }
 
 void ResourceImporterSVGVGPath::get_recognized_extensions(List<String> *p_extensions) const {
-	p_extensions->push_back("svg");
-	p_extensions->push_back("svgz");
+	p_extensions->push_back("vg-svg");
+	p_extensions->push_back("vg-svgz");
 }
 
 String ResourceImporterSVGVGPath::get_save_extension() const {
@@ -77,7 +77,7 @@ Error ResourceImporterSVGVGPath::import(const String &p_source_file, const Strin
 	Node2D *root = memnew(Node2D);
 
 	String units = "px";
-	float dpi = 100.0;
+	const float dpi = 100;
 
 	Vector<uint8_t> buf = FileAccess::get_file_as_array(p_source_file);
 

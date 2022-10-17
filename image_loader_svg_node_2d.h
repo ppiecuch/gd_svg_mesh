@@ -26,7 +26,7 @@ public:
 
 	virtual void get_import_options(List<ImportOption> *r_options, int p_preset = 0) const;
 	virtual bool get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const;
-	virtual Error import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = NULL, Variant *r_metadata = NULL);
+	virtual Error import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = nullptr, Variant *r_metadata = nullptr);
 
 	static Point2 compute_center(const tove::PathRef &p_path) {
 		const float *bounds = p_path->getBounds();
@@ -47,8 +47,8 @@ String ResourceImporterSVGNode2D::get_visible_name() const {
 }
 
 void ResourceImporterSVGNode2D::get_recognized_extensions(List<String> *p_extensions) const {
-	p_extensions->push_back("svg");
-	p_extensions->push_back("svgz");
+	p_extensions->push_back("vg-svg");
+	p_extensions->push_back("vg-svgz");
 }
 
 String ResourceImporterSVGNode2D::get_save_extension() const {
@@ -78,7 +78,7 @@ Error ResourceImporterSVGNode2D::import(const String &p_source_file, const Strin
 	Node2D *root = memnew(Node2D);
 
 	String units = "px";
-	float dpi = 100.0;
+	const float dpi = 100;
 
 	Vector<uint8_t> buf = FileAccess::get_file_as_array(p_source_file);
 

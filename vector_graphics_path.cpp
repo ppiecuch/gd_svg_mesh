@@ -133,8 +133,8 @@ void VGPath::import_svg(const String &p_path) {
 
 	const float *bounds = tove_graphics->getBounds();
 
-	float s = 256.0f / MAX(bounds[2] - bounds[0], bounds[3] - bounds[1]);
-	if (s > 1.0f) {
+	float s = 256.0 / MAX(bounds[2] - bounds[0], bounds[3] - bounds[1]);
+	if (s > 1) {
 		tove::nsvg::Transform transform(s, 0, 0, 0, s, 0);
 		transform.setWantsScaleLineWidth(true);
 		tove_graphics->set(tove_graphics, transform);

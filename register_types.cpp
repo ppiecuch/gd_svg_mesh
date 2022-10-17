@@ -6,7 +6,6 @@
 #include "image_loader_svg_node_2d.h"
 #include "image_loader_svg_spatial.h"
 #include "image_loader_svg_vgpath.h"
-#include "resource_format_loader_svg.h"
 #include "vector_graphics_path.h"
 #include "vector_graphics_paint.h"
 #include "vector_graphics_color.h"
@@ -21,10 +20,6 @@
 #include "vector_graphics_editor_plugin.h"
 #endif
 
-#if GDTOVE_SVG_RFL
-static Ref<ResourceFormatLoaderSVG> svg_loader;
-#endif
-
 #ifdef TOOLS_ENABLED
 static void editor_init_callback() {
 	EditorNode *editor = EditorNode::get_singleton();
@@ -33,11 +28,6 @@ static void editor_init_callback() {
 #endif
 
 void register_gd_vector_graphics_types() {
-#if GDTOVE_SVG_RFL
-	svg_loader.instance();
-	ResourceLoader::add_resource_format_loader(svg_loader);
-#endif
-
 	ClassDB::register_class<VGPath>();
 	// ClassDB::register_class<VGPaint>();
 	ClassDB::register_class<VGColor>();
@@ -67,8 +57,4 @@ void register_gd_vector_graphics_types() {
 }
 
 void unregister_gd_vector_graphics_types() {
-#if GDTOVE_SVG_RFL
-	ResourceLoader::remove_resource_format_loader(svg_loader);
-	svg_loader.unref();
-#endif
 }
