@@ -8,8 +8,8 @@
 
 #if GDTOVE_SVG_RFL
 
-#ifndef TOVEGD_RESOURCE_FORMAT_LOADER_SVG
-#define TOVEGD_RESOURCE_FORMAT_LOADER_SVG
+#ifndef VG_RESOURCE_FORMAT_LOADER_SVG_H
+#define VG_RESOURCE_FORMAT_LOADER_SVG_H
 
 #include "io/resource_loader.h"
 
@@ -21,6 +21,6 @@ public:
 	virtual String get_resource_type(const String &p_path) const;
 };
 
-#endif // TOVEGD_RESOURCE_FORMAT_LOADER_SVG
+#endif // VG_RESOURCE_FORMAT_LOADER_SVG_H
 
 #endif // GDTOVE_SVG_RFL

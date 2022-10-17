@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VG_IMAGE_LOADER_SVG_SPATIAL_H
+#define VG_IMAGE_LOADER_SVG_SPATIAL_H
 
 #include "core/io/resource_importer.h"
 #include "core/io/resource_saver.h"
@@ -208,3 +209,5 @@ Error ResourceImporterSVGSpatial::import(const String &p_source_file, const Stri
 ResourceImporterSVGSpatial::ResourceImporterSVGSpatial() { }
 
 ResourceImporterSVGSpatial::~ResourceImporterSVGSpatial() { }
+
+#endif // VG_IMAGE_LOADER_SVG_SPATIAL_H

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VG_IMAGE_LOADER_SVG_NODE_2D_H
+#define VG_IMAGE_LOADER_SVG_NODE_2D_H
 
 #include "core/io/resource_importer.h"
 #include "core/io/resource_saver.h"
@@ -154,3 +155,5 @@ ResourceImporterSVGNode2D::ResourceImporterSVGNode2D() {
 
 ResourceImporterSVGNode2D::~ResourceImporterSVGNode2D() {
 }
+
+#endif // VG_IMAGE_LOADER_SVG_NODE_2D_H

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VG_IMAGE_LOADER_SVG_VGPATH_H
+#define VG_IMAGE_LOADER_SVG_VGPATH_H
 
 #include "core/io/resource_importer.h"
 #include "core/io/resource_saver.h"
@@ -139,3 +140,5 @@ ResourceImporterSVGVGPath::ResourceImporterSVGVGPath() {
 
 ResourceImporterSVGVGPath::~ResourceImporterSVGVGPath() {
 }
+
+#endif // VG_IMAGE_LOADER_SVG_VGPATH_H
