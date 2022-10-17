@@ -26,7 +26,7 @@ public:
 
 	virtual void get_import_options(List<ImportOption> *r_options, int p_preset = 0) const;
 	virtual bool get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const;
-	virtual Error import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = NULL, Variant *r_metadata = NULL);
+	virtual Error import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files = nullptr, Variant *r_metadata = nullptr);
 
 	static Point2 compute_center(const tove::PathRef &p_path) {
 		const float *bounds = p_path->getBounds();
@@ -38,12 +38,10 @@ public:
 };
 
 String ResourceImporterSVGVGPath::get_importer_name() const {
-
 	return "svgvgpath";
 }
 
 String ResourceImporterSVGVGPath::get_visible_name() const {
-
 	return "SVGVGPath";
 }
 
@@ -57,20 +55,18 @@ String ResourceImporterSVGVGPath::get_save_extension() const {
 }
 
 String ResourceImporterSVGVGPath::get_resource_type() const {
-
 	return "PackedScene";
 }
 
 bool ResourceImporterSVGVGPath::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
-
 	return true;
 }
 
 int ResourceImporterSVGVGPath::get_preset_count() const {
 	return 0;
 }
-String ResourceImporterSVGVGPath::get_preset_name(int p_idx) const {
 
+String ResourceImporterSVGVGPath::get_preset_name(int p_idx) const {
 	return String();
 }
 
@@ -79,7 +75,6 @@ void ResourceImporterSVGVGPath::get_import_options(List<ImportOption> *r_options
 
 Error ResourceImporterSVGVGPath::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	Node2D *root = memnew(Node2D);
-
 
 	String units = "px";
 	float dpi = 100.0;
@@ -97,14 +92,15 @@ Error ResourceImporterSVGVGPath::import(const String &p_source_file, const Strin
 			str.utf8().ptr(), units.utf8().ptr(), dpi);
 	{
 		const float *bounds = tove_graphics->getBounds();
-		float s = 256.0f / MAX(bounds[2] - bounds[0], bounds[3] - bounds[1]);
-		if (s > 1.0f) {
+		float s = 256.0 / MAX(bounds[2] - bounds[0], bounds[3] - bounds[1]);
+		if (s > 1) {
 			tove::nsvg::Transform transform(s, 0, 0, 0, s, 0);
 			transform.setWantsScaleLineWidth(true);
 			tove_graphics->set(tove_graphics, transform);
 		}
 	}
 	int32_t n = tove_graphics->getNumPaths();
+	print_verbose(vformat("[SVG] Processing %d paths ...", n));
 	Ref<VGMeshRenderer> renderer;
 	renderer.instance();
 	VGPath *root_path = memnew(VGPath(tove::tove_make_shared<tove::Path>()));

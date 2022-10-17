@@ -39,20 +39,19 @@ void register_gd_vector_graphics_types() {
 #endif
 
 	ClassDB::register_class<VGPath>();
-	//ClassDB::register_class<VGPaint>();
+	// ClassDB::register_class<VGPaint>();
 	ClassDB::register_class<VGColor>();
-	//ClassDB::register_class<VGGradient>();
+	// ClassDB::register_class<VGGradient>();
 	ClassDB::register_class<VGLinearGradient>();
 	ClassDB::register_class<VGRadialGradient>();
 
-	//ClassDB::register_class<VGRenderer>();
+	// ClassDB::register_class<VGRenderer>();
 	ClassDB::register_class<VGSpriteRenderer>();
 	ClassDB::register_class<VGMeshRenderer>();
 
 	Ref<ResourceImporterSVGSpatial> svg_spatial_loader;
 	svg_spatial_loader.instance();
 	ResourceFormatImporter::get_singleton()->add_importer(svg_spatial_loader);
-
 
 	Ref<ResourceImporterSVGNode2D> svg_node_2d_loader;
 	svg_node_2d_loader.instance();
