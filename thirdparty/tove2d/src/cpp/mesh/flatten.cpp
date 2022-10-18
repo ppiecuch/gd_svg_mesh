@@ -326,6 +326,7 @@ ClipperPaths AbstractAdaptiveFlattener::computeDashes(
 	for (int i = 0; i < dashCount; i++) {
 		dashLength += dashArray[i];
 	}
+	(void)dashLength;
 
 	for (int i = 0; i < lines.size(); i++) {
 		const ClipperPath &path = lines[i];
