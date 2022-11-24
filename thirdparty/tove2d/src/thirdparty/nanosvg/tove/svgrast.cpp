@@ -436,12 +436,12 @@ TOVEscanlineFunction tove__initPaint(
 
 bool tove__rasterize(
 	NSVGrasterizer* r,
-    NSVGimage* image,
-    int w,
-    int h,
+	NSVGimage* image,
+	int w,
+	int h,
 	float tx,
-    float ty,
-    float scale)
+	float ty,
+	float scale)
 {
 	if (!BestGradientColors::allocate(r, w)) {
 		return false;

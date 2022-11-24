@@ -591,9 +591,9 @@ void Subpath::makeSmooth(int k, int dir, float a) {
 	const float d2 = distance(p1x, p1y, p2x, p2y);
 
 	const float d1_a = std::pow(d1, a);
-    const float d1_2a = d1_a * d1_a;
-    const float d2_a = std::pow(d2, a);
-    const float d2_2a = d2_a * d2_a;
+	const float d1_2a = d1_a * d1_a;
+	const float d2_a = std::pow(d2, a);
+	const float d2_2a = d2_a * d2_a;
 
 	if (dir <= 0 && prev) {
 		const float A = 2 * d2_2a + 3 * d2_a * d1_a + d1_2a;
@@ -713,14 +713,14 @@ ToveCurvature *Subpath::saveCurvature() {
 		float ex = pts[2 * (k0 + 2) + 0] - (x1 + v0.x);
 		float ey = pts[2 * (k0 + 2) + 1] - (y1 + v0.y);
 		if (vec2(ex, ey).magnitude() > 0.1) {
-			printf("error in %p %d\n", this, i);
+			printf("Error in %p %d\n", this, i);
 		}
 
 		const vec2 v1 = n.rotated(c.angle2) * (m2 * (2.0f - c.balance));
 		ex = pts[2 * (k1 + 1) + 0] - (x1 + v1.x);
 		ey = pts[2 * (k1 + 1) + 1] - (y1 + v1.y);
 		if (vec2(ex, ey).magnitude() > 0.1) {
-			printf("error in %p %d\n", this, i);
+			printf("Error in %p %d\n", this, i);
 		}
 #endif
 	}
