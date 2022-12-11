@@ -51,7 +51,7 @@ private:
 
 	int find_pivot(int h) {
 		int i_max = h;
-		float m = 0.0f;
+		float m = 0;
 		for (int i = h; i < 3; i++) {
 			float t = Math::abs(A[i][h]);
 			if (t > m) {
@@ -612,7 +612,6 @@ public:
 };
 
 class VGCurveTool : public VGTool {
-	// VGPath *root;
 	VGPath *node_vg;
 
 	VGEditor *vg_editor;
@@ -644,7 +643,7 @@ class VGCurveTool : public VGTool {
 		return node_vg;
 	}
 
-public:	
+public:
 	VGCurveTool(VGEditor *p_vg_editor, VGPath *p_path) :
 		vg_editor(p_vg_editor), editor(p_vg_editor->get_editor_node()) {
 
@@ -1005,8 +1004,9 @@ bool SubpathPos::valid() const {
 
 bool VGEditor::_is_empty() const {
 
-	if (!_get_node())
+	if (!_get_node()) {
 		return true;
+	}
 
 	return node_vg->is_empty() == 0;
 }
@@ -1037,9 +1037,10 @@ void VGEditor::_tool_selected(int p_tool) {
 				tool = Ref<VGTool>(memnew(VGCurveTool(this, node_vg)));
 				break;
 
-			/*case TOOL_ELLIPSE:
+			/* case TOOL_ELLIPSE:
 				tool = Ref<VGTool>(memnew(VGEllipseTool(node_vg)));
-				break;*/
+				break;
+			*/
 		}
 	}
 
@@ -1049,24 +1050,24 @@ void VGEditor::_tool_selected(int p_tool) {
 void VGEditor::_node_replace_owner_do(Node *p_base, Node *p_node, Node *p_root) {
 
 	if (p_node->get_owner() == p_base && p_node != p_root) {
-		//undo_redo->add_do_method(p_node, "set_owner", p_root);
+		// undo_redo->add_do_method(p_node, "set_owner", p_root);
 	}
 
 	for (int i = 0; i < p_node->get_child_count(); i++) {
-		//undo_redo->add_do_method(p_node, "remove_child", p_node->get_child(i));
+		// undo_redo->add_do_method(p_node, "remove_child", p_node->get_child(i));
 		_node_replace_owner_do(p_base, p_node->get_child(i), p_root);
 	}
 }
 
 void VGEditor::_node_replace_owner_undo(Node *p_base, Node *p_node, Node *p_root) {
 
-	if (/*p_node->get_owner() == p_base &&*/ p_node != p_root) {
+	if (/* p_node->get_owner() == p_base && */ p_node != p_root) {
 		undo_redo->add_undo_method(p_node, "set_owner", p_root);
 	}
 	undo_redo->add_undo_reference(p_node);
 
 	for (int i = 0; i < p_node->get_child_count(); i++) {
-		//undo_redo->add_undo_method(p_node, "add_child", p_node->get_child(i));
+		// undo_redo->add_undo_method(p_node, "add_child", p_node->get_child(i));
 		_node_replace_owner_undo(p_base, p_node->get_child(i), p_root);
 	}
 }
@@ -1082,7 +1083,7 @@ void VGEditor::_create_mesh_node() {
 		return;
 	}
 
-	//EditorNode::get_singleton()->get_scene_tree_dock()->replace_node(node_vg, baked);
+	// EditorNode::get_singleton()->get_scene_tree_dock()->replace_node(node_vg, baked);
 
 	Node *parent = node_vg->get_parent();
 
@@ -1103,16 +1104,13 @@ void VGEditor::_create_mesh_node() {
 	_node_replace_owner_undo(node_vg, node_vg, node_vg->get_owner());
 	undo_redo->add_undo_reference(node_vg);
 
-	//undo_redo->create_action(TTR("Remove VG Node"));
+	// undo_redo->create_action(TTR("Remove VG Node"));
 	undo_redo->commit_action();
 }
 
 void VGEditor::_notification(int p_what) {
-
 	switch (p_what) {
-
 		case NOTIFICATION_READY: {
-
 			tool_buttons[0]->set_icon(EditorNode::get_singleton()->get_gui_base()->get_icon("ToolSelect", "EditorIcons"));
 			tool_buttons[1]->set_icon(EditorNode::get_singleton()->get_gui_base()->get_icon("EditBezier", "EditorIcons"));
 			//tool_buttons[2]->set_icon(EditorNode::get_singleton()->get_gui_base()->get_icon("SphereShape", "EditorIcons"));
@@ -1122,10 +1120,8 @@ void VGEditor::_notification(int p_what) {
 			get_tree()->connect("node_removed", this, "_node_removed");
 
 			create_resource->connect("confirmed", this, "_create_resource");
-
 		} break;
 		case NOTIFICATION_PHYSICS_PROCESS: {
-
 		} break;
 	}
 }
@@ -1153,13 +1149,13 @@ bool VGEditor::forward_gui_input(const Ref<InputEvent> &p_event) {
 		return tool->forward_gui_input(p_event);
 	}
 
-	if (!_get_node())
+	if (!_get_node()) {
 		return false;
+	}
 
 	Ref<InputEventMouseButton> mb = p_event;
 
 	if (!_has_resource()) {
-
 		if (mb.is_valid() && mb->get_button_index() == 1 && mb->is_pressed()) {
 			create_resource->set_text(String("No vector graphics resource on this node.\nCreate and assign one?"));
 			create_resource->popup_centered_minsize();
@@ -1308,12 +1304,12 @@ Vector2 ControlPointIterator::get_knot_pos() const {
 
 void VGEditor::forward_canvas_draw_over_viewport(Control *p_overlay) {
 
-	if (!node_vg)
+	if (!node_vg) {
 		return;
+	}
 
 	Control *vpc = canvas_item_editor->get_viewport_control();
-	/* Transform2D xform = canvas_item_editor->get_canvas_transform() *
-		_get_node()->get_global_transform(); */
+	// Transform2D xform = canvas_item_editor->get_canvas_transform() * _get_node()->get_global_transform();
 	const Ref<Texture> handle = get_icon("EditorHandle", "EditorIcons");
 
 	_update_overlay();
@@ -1340,13 +1336,10 @@ void VGEditor::edit(Node *p_node_vg) {
 	}
 
 	if (p_node_vg) {
-
 		_set_node(p_node_vg);
 		_tool_selected(TOOL_TRANSFORM);
 		_update_overlay(true);
-
 	} else {
-
 		_set_node(NULL);
 		overlay = Ref<Mesh>();
 		_update_overlay(true);
@@ -1376,8 +1369,9 @@ void VGCurveTool::_commit_action() {
 
 bool VGCurveTool::_is_empty() const {
 
-	if (!_get_node())
+	if (!_get_node()) {
 		return true;
+	}
 
 	return node_vg->is_empty() == 0;
 }
@@ -1404,8 +1398,9 @@ void VGCurveTool::remove_point(const Vertex &p_vertex) {
 
 	canvas_item_editor->get_viewport_control()->update();
 
-	//if (_is_empty())
-	//	_tool_selected(0);
+	/* if (_is_empty()) {
+		_tool_selected(0);
+	} */
 
 	hover_point = Vertex();
 	if (selected_point == p_vertex)
@@ -1479,8 +1474,7 @@ SubpathPos VGCurveTool::closest_subpath_point(const Vector2 &p_pos) const {
 
 	const real_t grab_threshold = EDITOR_DEF("editors/poly_editor/point_grab_radius", 8);
 
-	const Transform2D xform = canvas_item_editor->get_canvas_transform() *
-		_get_node()->get_global_transform();
+	const Transform2D xform = canvas_item_editor->get_canvas_transform() * _get_node()->get_global_transform();
 
 	const Vector2 pos = xform_inv(xform, p_pos);
 	float dmin = basis_xform_inv(xform, Vector2(0.5, 0)).length();
@@ -1522,7 +1516,7 @@ void VGEditor::_update_overlay(bool p_always_update) {
 	overlay_draw_xform = Transform2D().translated(xform.elements[2]);
 
 	if (!p_always_update) {
-		float err = 0.0f;
+		float err = 0;
 		for (int i = 0; i < 2; i++) {
 			err += (xform.elements[i] - overlay_full_xform.elements[i]).length_squared();
 		}
