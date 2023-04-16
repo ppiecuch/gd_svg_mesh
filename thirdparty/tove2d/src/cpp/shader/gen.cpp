@@ -16,11 +16,9 @@
 BEGIN_TOVE_NAMESPACE
 
 thread_local std::string ShaderWriter::sSource;
-ToveShaderLanguage ShaderWriter::sLanguage = TOVE_GLSL2;
 int ShaderWriter::sMatrixRows = 2;
 
-void ShaderWriter::configure(ToveShaderLanguage language, int matrixRows) {
-	sLanguage = language;
+void ShaderWriter::configure(int matrixRows) {
 	sMatrixRows = matrixRows;
 }
 
@@ -33,16 +31,10 @@ void ShaderWriter::define(const std::string &key, int value) {
 }
 
 ShaderWriter::ShaderWriter() {
-#if TOVE_TARGET == TOVE_TARGET_LOVE2D
-	if (sLanguage == TOVE_GLSL3) {
-		out << "#pragma language glsl3\n#define GLSL3 1\n";
-	}
-#else
 	out << R"GLSL(
 shader_type canvas_item;
 render_mode skip_vertex_transform;
 )GLSL";
-#endif
 
 	switch (sMatrixRows) {
 		case 2:
@@ -56,30 +48,13 @@ render_mode skip_vertex_transform;
 			break;
 	}
 
-#if TOVE_TARGET == TOVE_TARGET_LOVE2D
-	define("TEXEL", "Texel");
-#else
 	define("TEXEL", "texture");
-#endif
 }
 
 void ShaderWriter::beginVertexShader() {
-#if TOVE_TARGET == TOVE_TARGET_LOVE2D
-	out << R"GLSL(
-#ifdef VERTEX
-)GLSL";
-#endif
 }
 
 void ShaderWriter::endVertexShader() {
-#if TOVE_TARGET == TOVE_TARGET_LOVE2D
-	out << R"GLSL(
-vec4 position(mat4 transform_projection, vec4 vertex_pos) {
-	return transform_projection * do_vertex(vertex_pos);
-}
-#endif // VERTEX
-)GLSL";
-#elif TOVE_TARGET == TOVE_TARGET_GODOT
 	out << R"GLSL(
 void vertex() {
 	vec4 v = vec4(VERTEX, 0.0, 1.0);
@@ -87,26 +62,12 @@ void vertex() {
 	VERTEX = (EXTRA_MATRIX * (WORLD_MATRIX * v)).xy;
 }
 )GLSL";
-#endif
 }
 
 void ShaderWriter::beginFragmentShader() {
-#if TOVE_TARGET == TOVE_TARGET_LOVE2D
-	out << R"GLSL(
-#ifdef PIXEL
-)GLSL";
-#endif
 }
 
 void ShaderWriter::endFragmentShader() {
-#if TOVE_TARGET == TOVE_TARGET_LOVE2D
-	out << R"GLSL(
-vec4 effect(vec4 _1, Image _2, vec2 texture_coords, vec2 _4) {
-	return do_color(texture_coords);
-}
-#endif // PIXEL
-)GLSL";
-#endif
 }
 
 void ShaderWriter::writePaintShader(
@@ -218,8 +179,8 @@ const char *ShaderWriter::getSourcePtr() {
 
 END_TOVE_NAMESPACE
 
-void ConfigureShaderCode(ToveShaderLanguage language, int matrixRows) {
-	tove::ShaderWriter::configure(language, matrixRows);
+void ConfigureShaderCode(int matrixRows) {
+	tove::ShaderWriter::configure(matrixRows);
 }
 
 const char *GetPaintShaderCode(int numPaints, int numGradients) {

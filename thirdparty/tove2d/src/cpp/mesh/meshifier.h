@@ -37,8 +37,6 @@ public:
 	virtual ToveMeshUpdateFlags pathToMesh(
 		ToveMeshUpdateFlags update,
 		const PathRef &path,
-		const int pathIndex,
-		const PathPaintInd &paint,
 		const MeshRef &fill,
 		const MeshRef &line,
 		int &fillIndex,
@@ -79,8 +77,6 @@ public:
 	virtual ToveMeshUpdateFlags pathToMesh(
 		ToveMeshUpdateFlags update,
 		const PathRef &path,
-		const int pathIndex,
-		const PathPaintInd &paint,
 		const MeshRef &fill,
 		const MeshRef &line,
 		int &fillIndex,
@@ -95,15 +91,16 @@ public:
 class RigidTesselator : public AbstractTesselator {
 private:
 	const RigidFlattener flattener;
+	const ToveHoles holes;
 
 public:
-	RigidTesselator(int subdivisions);
+	RigidTesselator(
+		int subdivisions,
+		ToveHoles holes);
 
 	virtual ToveMeshUpdateFlags pathToMesh(
 		ToveMeshUpdateFlags update,
 		const PathRef &path,
-		const int pathIndex,
-		const PathPaintInd &paint,
 		const MeshRef &fill,
 		const MeshRef &line,
 		int &fillIndex,

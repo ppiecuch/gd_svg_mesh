@@ -141,8 +141,6 @@ public:
 NSVGlineJoin nsvgLineJoin(ToveLineJoin join);
 ToveLineJoin toveLineJoin(NSVGlineJoin join);
 
-NSVGlineCap nsvgLineCap(ToveLineCap cap);
-ToveLineCap toveLineCap(NSVGlineCap cap);
 }
 
 END_TOVE_NAMESPACE

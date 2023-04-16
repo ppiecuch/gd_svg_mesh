@@ -1,18 +1,16 @@
 /*
-* TÖVE - Animated vector graphics for LÖVE.
-* https://github.com/poke1024/tove2d
-*
-* Copyright (c) 2018, Bernhard Liebl
-*
-* Distributed under the MIT license. See LICENSE file for details.
-*
-* All rights reserved.
-*/
+ * TÖVE - Animated vector graphics for LÖVE.
+ * https://github.com/poke1024/tove2d
+ *
+ * Copyright (c) 2018, Bernhard Liebl
+ *
+ * Distributed under the MIT license. See LICENSE file for details.
+ *
+ * All rights reserved.
+ */
 
 #ifndef __TOVE_SHADER_COLOR
 #define __TOVE_SHADER_COLOR 1
-
-#include "core/error_macros.h"
 
 #include <functional>
 #include "../gen.h"
@@ -25,7 +23,6 @@ class AbstractPaintFeed {
 protected:
 	TovePaintData &paintData;
 	const float scale;
-	PaintRef shader;
 
 protected:
 	static TovePaintType getStyle(const PaintRef &paint) {
@@ -37,13 +34,12 @@ protected:
 			return style;
 		} else {
 			NSVGgradient *g = paint->getNSVGgradient();
-			ERR_FAIL_NULL_V(g, PAINT_NONE);
-
-			if (g->nstops < 1) {
-				return PAINT_NONE;
-			} else {
-				return style;
-			}
+			assert(g);
+	    	if (g->nstops < 1) {
+	    		return PAINT_NONE;
+	    	} else {
+	    		return style;
+	    	}
 		}
 	}
 
@@ -53,25 +49,21 @@ protected:
 			return style == PAINT_SOLID ? 1 : 0;
 		} else {
 			NSVGgradient *g = paint->getNSVGgradient();
-			ERR_FAIL_NULL_V(g, 0);
-			ERR_FAIL_COND_V(g->nstops < 1, 0);
-
-			if (SPECIAL_CASE_2 && g->nstops == 2 &&
-				g->stops[0].offset == 0 &&
-				g->stops[1].offset == 1) {
-				return 2;
-			} else {
-				return 256;
-			}
+			assert(g && g->nstops >= 1);
+	    	if (SPECIAL_CASE_2 && g->nstops == 2 &&
+				g->stops[0].offset == 0.0 &&
+				g->stops[1].offset == 1.0) {
+	    		return 2;
+	    	} else {
+	    		return 256;
+	    	}
 		}
 	}
 
 	bool update(const PaintRef &paint, float opacity) {
-		ToveGradientData &gradient = paintData.gradient;
-		if (gradient.colorsTexture==nullptr) assert(false);
-		ERR_FAIL_NULL_V(gradient.colorsTexture, false);
-
 		const TovePaintType style = (TovePaintType)paintData.style;
+		ToveGradientData &gradient = paintData.gradient;
+
 		if (style < PAINT_LINEAR_GRADIENT) {
 			if (style == PAINT_SOLID) {
 
@@ -80,6 +72,40 @@ protected:
 				// handing over solid colors (see ColorSend:endInit).
 				// (regression test: line in gpux blob).
 				paint->getRGBA(paintData.rgba, opacity);
+
+				float *m = gradient.matrix;
+				if (m) {
+					// use a mat3(0) matrix here to map all coords
+					// to (0, 0). this allows us to only init the
+					// first row in the texture below - otherwise
+					// we'd have to fill full colorsTextureHeight
+
+					m[0] = 0;
+					m[1] = 0;
+					m[2] = 0;
+
+					m[3] = 0;
+					m[4] = 0;
+					m[5] = 0;
+
+					const int rows = gradient.matrixRows;
+					if (rows >= 3) { // i.e. mat3x3
+						m[6] = 0;
+						m[7] = 0;
+						m[8] = 0;
+
+						if (rows == 4) { // i.e. mat3x4
+							m[9] = 0;
+							m[10] = 0;
+							m[11] = 0;
+						}
+					}
+				}
+
+				float *arguments = gradient.arguments;
+				if (arguments) {
+					*arguments = 0.0f;
+				}
 
 				uint8_t *texture = gradient.colorsTexture;
 				if (texture) {
@@ -96,16 +122,17 @@ protected:
 			return true;
 		}
 
+		assert(gradient.colorsTexture != nullptr);
 		uint8_t *texture = gradient.colorsTexture;
 		const int textureRowBytes = gradient.colorsTextureRowBytes;
 
 		NSVGgradient *g = paint->getNSVGgradient();
-		ERR_FAIL_NULL_V(g, false);
+		assert(g);
 
-		if (SPECIAL_CASE_2 && gradient.numColors == 2 &&
+		if (SPECIAL_CASE_2 && gradient.numColors <= 2 &&
 			gradient.colorsTextureHeight == gradient.numColors) {
-			ERR_FAIL_COND_V(g->nstops != gradient.numColors, false);
-
+			
+			assert(g->nstops == gradient.numColors);
 			for (int i = 0; i < gradient.numColors; i++) {
 				*(uint32_t*)texture = nsvg::applyOpacity(
 					g->stops[i].color, opacity);
@@ -117,14 +144,19 @@ protected:
 				NSVG_PAINT_LINEAR_GRADIENT : NSVG_PAINT_RADIAL_GRADIENT;
 			nsvgPaint.gradient = g;
 
-			ERR_FAIL_COND_V(gradient.colorsTextureHeight != 256, false);
+			assert(gradient.numColors == 256 &&
+				gradient.colorsTextureHeight == 256);
 
 			nsvg::CachedPaint cached(texture, textureRowBytes, 256);
 			cached.init(nsvgPaint, opacity);
 		}
 
-		ERR_FAIL_NULL_V(gradient.matrix, false);
+		assert(gradient.matrix != nullptr);
 		paint->getGradientMatrix(gradient.matrix, scale);
+
+		if (gradient.arguments) {
+			*gradient.arguments = (style == PAINT_RADIAL_GRADIENT) ? 1.0f : 0.0f;
+		}
 
 		return true;
 	}
@@ -153,7 +185,7 @@ protected:
 			case CHANGED_FILL_STYLE:
 				return path->getFillColor();
 			default:
-				WARN_PRINT("Unknown style");
+				assert(false);
 		}
 		return none;
 	}
@@ -175,14 +207,9 @@ public:
 		std::memset(&paintData, 0, sizeof(paintData));
 
 		const PaintRef &color = getColor();
-		const TovePaintType style = getStyle(color);
+        const TovePaintType style = getStyle(color);
 		paintData.style = style;
 		paintData.gradient.numColors = determineNumColors(color);
-
-		if (style == PAINT_SHADER) {
-			shader = std::static_pointer_cast<PaintShader>(color);
-			paintData.shader = shader.get();
-		}
 	}
 
 	virtual ~PaintFeedBase() {
@@ -199,52 +226,53 @@ public:
 		return paintData.gradient.numColors;
 	}
 
+	void bind(const ToveGradientData &data, int i) {
+		const int size = 3 * data.matrixRows;
+
+		paintData.gradient.matrix = data.matrix + i * size;
+		paintData.gradient.arguments = &data.arguments[i];
+		paintData.gradient.colorsTexture = 	data.colorsTexture + 4 * i;
+		paintData.gradient.colorsTextureRowBytes = data.colorsTextureRowBytes;
+		paintData.gradient.colorsTextureHeight = data.colorsTextureHeight;
+
+		update(getColor(), path->getOpacity());
+	}
+
 	inline ToveChangeFlags beginUpdate() {
 		if (changed) {
 			changed = false;
 
 			const PaintRef &color = getColor();
-			const TovePaintType style = getStyle(color);
+	        const TovePaintType style = getStyle(color);
 
-			if (paintData.style != style ||
+	        if (paintData.style != style ||
 				determineNumColors(color) != paintData.gradient.numColors) {
-				return CHANGED_RECREATE;
+
+ 				return CHANGED_RECREATE;
 			}
 
 			return CHANGED_STYLE;
 		} else {
 			return 0;
 		}
-	}
+    }
 
 	inline ToveChangeFlags endUpdate() {
-		return update(getColor(), path->getOpacity()) ? CHANGED_STYLE : 0;
-	}
+    	return update(getColor(), path->getOpacity()) ? CHANGED_STYLE : 0;
+    }
 };
 
 class PaintFeed : public PaintFeedBase {
 private:
 	TovePaintData _data;
-	const PaintIndex paintIndex;
 
 public:
 	PaintFeed(const PaintFeed &feed) :
-		PaintFeedBase(feed.path, _data, feed.scale, feed.CHANGED_STYLE), paintIndex(feed.paintIndex) {
+		PaintFeedBase(feed.path, _data, feed.scale, feed.CHANGED_STYLE) {
 	}
 
-	PaintFeed(const PathRef &path, float scale, ToveChangeFlags changed, const PaintIndex &paintIndex) :
-		PaintFeedBase(path, _data, scale, changed), paintIndex(paintIndex) {
-	}
-
-	void bindPaintIndices(const ToveGradientData &data) {
-		const int size = 3 * data.matrixRows;
-
-		paintData.gradient.matrix = data.matrix + paintIndex.getGradientIndex() * size;
-		paintData.gradient.colorsTexture = data.colorsTexture + 4 * paintIndex.getColorIndex();
-		paintData.gradient.colorsTextureRowBytes = data.colorsTextureRowBytes;
-		paintData.gradient.colorsTextureHeight = data.colorsTextureHeight;
-
-		update(getColor(), path->getOpacity());
+	PaintFeed(const PathRef &path, float scale, ToveChangeFlags changed) :
+		PaintFeedBase(path, _data, scale, changed) {
 	}
 };
 

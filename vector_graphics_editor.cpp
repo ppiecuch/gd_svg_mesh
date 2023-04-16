@@ -1498,8 +1498,7 @@ bool VGEditor::is_inside(const Vector2 &p_pos) const {
 		return false;
 	}
 
-	const Transform2D xform = canvas_item_editor->get_canvas_transform() *
-		_get_node()->get_global_transform();
+	const Transform2D xform = canvas_item_editor->get_canvas_transform() * _get_node()->get_global_transform();
 
 	return node_vg->is_inside(xform_inv(xform, p_pos));
 }
@@ -1545,7 +1544,7 @@ void VGEditor::_update_overlay(bool p_always_update) {
 		tove::TesselatorRef tesselator = tove::tove_make_shared<tove::AdaptiveTesselator>(
 			new tove::AdaptiveFlattener<tove::DefaultCurveFlattener>(
 				tove::DefaultCurveFlattener(100, 6)));
-	    tove::MeshRef tove_mesh = tove::tove_make_shared<tove::ColorMesh>(tove::NameRef());
+	    tove::MeshRef tove_mesh = tove::tove_make_shared<tove::ColorMesh>();
 		tesselator->graphicsToMesh(overlay_graphics.get(), UPDATE_MESH_EVERYTHING, tove_mesh, tove_mesh);
 		Ref<Texture> ignored_texture;
 		copy_mesh(overlay, tove_mesh, overlay_graphics, ignored_texture);

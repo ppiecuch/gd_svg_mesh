@@ -172,7 +172,7 @@ EXPORT void MeshCacheKeyFrame(ToveMeshRef mesh);
 EXPORT void MeshSetCacheSize(ToveMeshRef mesh, int size);
 EXPORT void ReleaseMesh(ToveMeshRef mesh);
 
-EXPORT void ConfigureShaderCode(ToveShaderLanguage language, int matrixRows);
+EXPORT void ConfigureShaderCode(int matrixRows);
 EXPORT const char *GetPaintShaderCode(int numPaints, int numGradients);
 
 EXPORT ToveShaderCode GetGPUXFillShaderCode(

@@ -24,7 +24,6 @@ private:
 
 	static thread_local std::string sSource;
 
-	static ToveShaderLanguage sLanguage;
 	static int sMatrixRows;
 
 	void writePaintShader(
@@ -34,7 +33,7 @@ private:
 		uint32_t &embedded);
 
 public:
-	static void configure(ToveShaderLanguage language, int matrixRows);
+	static void configure(int matrixRows);
 
 	static inline int getMatrixRows() {
 		return sMatrixRows;

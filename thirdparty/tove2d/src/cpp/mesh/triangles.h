@@ -13,7 +13,6 @@
 #define __TOVE_MESH_TRIANGLES 1
 
 #include "partition.h"
-#include "area.h"
 #include "../interface.h"
 #include "../utils.h"
 
@@ -44,7 +43,7 @@ public:
 
 private:
 	void _add(
-		const std::list<TPPLPoly> &triangles,
+		const std::list<ToveTPPLPoly> &triangles,
 		bool isFinalSize);
 
 	void _add(
@@ -63,13 +62,13 @@ public:
 		}
 	}
 
-	inline TriangleStore(const std::list<TPPLPoly> &triangles) :
+	inline TriangleStore(const std::list<ToveTPPLPoly> &triangles) :
 		mSize(0), mTriangles(nullptr), mMode(TRIANGLES_LIST) {
 
 		_add(triangles, true);
 	}
 
-	inline void add(const std::list<TPPLPoly> &triangles) {
+	inline void add(const std::list<ToveTPPLPoly> &triangles) {
 		assert(mMode == TRIANGLES_LIST);
 		_add(triangles, false);
 	}
@@ -83,7 +82,7 @@ public:
 		mSize = 0;
 	}
 
-	inline int32_t size() const {
+	inline size_t size() const {
 		return mSize;
 	}
 
@@ -95,7 +94,6 @@ public:
 		ToveVertexIndex *indices,
 		int32_t indexCount) const {
 
-		assert(indexCount >= mSize);
 		const int32_t n = std::min(mSize, indexCount);
 		if (n > 0) {
 			std::memcpy(indices, mTriangles,
@@ -108,77 +106,68 @@ struct Triangulation {
 	inline Triangulation(ToveTrianglesMode mode) : triangles(mode) {
 	}
 
-	inline Triangulation(
-		const std::list<TPPLPoly> &convex,
-		VanishingTriangles &&vanishing) :
-		
+	inline Triangulation(const std::list<ToveTPPLPoly> &convex) :
 		partition(convex),
 		triangles(TRIANGLES_LIST),
 		useCount(0),
-		keyframe(false),
-		vanishing(vanishing) {
+		keyframe(false) {
 	}
 
 	inline ToveTrianglesMode getMode() const {
 		return triangles.mode();
 	}
 
-	inline bool check(const Vertices &vertices) {
-		return vanishing.check(vertices) && partition.check(vertices);
-	}
-
 	Partition partition;
 	TriangleStore triangles;
 	uint64_t useCount;
 	bool keyframe;
-	VanishingTriangles vanishing;
 };
 
 class TriangleCache {
 private:
-	NameRef name;
-	std::list<Triangulation*> triangulations;
-
-	int16_t cacheSize;
+	std::vector<Triangulation*> triangulations;
+	int current;
+	int cacheSize;
 
 	void evict();
 
 	inline Triangulation *currentTriangulation() const {
-		assert(!triangulations.empty());
-		return triangulations.front();
-	}
-
-	inline void makeCurrent(std::list<Triangulation*>::iterator i) {
-		if (i != triangulations.begin()) {
-			triangulations.splice(triangulations.begin(), triangulations, i, std::next(i));
-		}
+		assert(current < (int32_t)triangulations.size());
+		return triangulations[current];
 	}
 
 public:
-	inline TriangleCache(const NameRef &name) :
-		name(name), cacheSize(2) {
+	inline TriangleCache(int cacheSize = 2) :
+		current(0), cacheSize(cacheSize) {
+		assert(cacheSize >= 2);
 	}
 
 	~TriangleCache();
 
-	void addAndMakeCurrent(Triangulation *t);
+	inline void add(Triangulation *t) {
+		if (t->partition.empty()) {
+			return;
+		}
 
-	inline void setCacheSize(int16_t size) {
-		cacheSize = std::max(cacheSize, size);
+		if (triangulations.size() + 1 > (size_t)cacheSize) {
+			evict();
+		}
+
+		triangulations.insert(triangulations.begin() + current, t);
 	}
 
-	inline void cacheKeyFrame() {
-		if (!triangulations.empty()) {
-			currentTriangulation()->keyframe = true;
-			cacheSize += 1;
+	inline void cache(bool keyframe) {
+		if (triangulations.size() == 0) {
+			return;
 		}
+		currentTriangulation()->keyframe = keyframe;
 	}
 
 	inline bool hasMode(ToveTrianglesMode mode) {
 		if (triangulations.empty()) {
 			return false;
 		} else {
-			return currentTriangulation()->getMode() == mode;
+			return triangulations[current]->getMode() == mode;
 		}
 	}
 
@@ -186,12 +175,12 @@ public:
 		if (triangulations.empty()) {
 			triangulations.push_back(new Triangulation(mode));
 		} else {
-			assert(hasMode(mode));
+			assert(triangulations[current]->getMode() == mode);
 		}
 		return currentTriangulation()->triangles.allocate(n);
 	}
 
-	inline void add(const std::list<TPPLPoly> &triangles) {
+	inline void add(const std::list<ToveTPPLPoly> &triangles) {
 		if (triangulations.empty()) {
 			triangulations.push_back(new Triangulation(TRIANGLES_LIST));
 		}
@@ -207,22 +196,22 @@ public:
 	}
 
 	inline void clear() {
-		if (!triangulations.empty()) {
-			currentTriangulation()->triangles.clear();
+		if (current < (int32_t)triangulations.size()) {
+			triangulations[current]->triangles.clear();
 		}
 	}
 
 	inline ToveTrianglesMode getIndexMode() const {
-		if (!triangulations.empty()) {
-			return currentTriangulation()->triangles.mode();
+		if (current < (int32_t)triangulations.size()) {
+			return triangulations[current]->triangles.mode();
 		} else {
 			return TRIANGLES_LIST;
 		}
 	}
 
 	inline int32_t getIndexCount() const {
-		if (!triangulations.empty()) {
-			return currentTriangulation()->triangles.size();
+		if (current < (int32_t)triangulations.size()) {
+			return triangulations[current]->triangles.size();
 		} else {
 			return 0;
 		}
@@ -231,9 +220,9 @@ public:
 	inline void copyIndexData(
 		ToveVertexIndex *indices,
 		int32_t indexCount) const {
-
-		if (!triangulations.empty()) {
-			const auto &t = currentTriangulation()->triangles;
+		
+		if (current < (int32_t)triangulations.size()) {
+			auto &t = triangulations[current]->triangles;
 			t.copy(indices, indexCount);
 		}
 	}

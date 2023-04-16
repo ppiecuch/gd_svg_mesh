@@ -14,6 +14,7 @@
 
 #include "../common.h"
 #include "utils.h"
+
 #include <vector>
 
 BEGIN_TOVE_NAMESPACE
@@ -28,13 +29,12 @@ private:
 	};
 
 	std::vector<Part> parts;
-	std::vector<vec2> tempPts;
 
 public:
 	inline Partition() {
 	}
 
-	Partition(const std::list<TPPLPoly> &convex);
+	Partition(const std::list<ToveTPPLPoly> &convex);
 
 	inline bool empty() const {
 		return parts.empty();

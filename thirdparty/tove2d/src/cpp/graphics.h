@@ -44,7 +44,9 @@ private:
 	void link();
 
 public:
-	ClipSet(const std::vector<ClipRef> &c);
+	ClipSet(const std::vector<ClipRef> &c) : clips(c) {
+		link();
+	}
 	ClipSet(const ClipSet &source, const nsvg::Transform &t);
 
 	TOVEclipPath *getHead() const {
@@ -63,28 +65,6 @@ public:
 typedef SharedPtr<ClipSet> ClipSetRef;
 #endif
 
-class PaintIndices {
-	std::vector<PathPaintInd> paints;
-	PaintIndex size;
-
-public:
-	PaintIndices(Graphics *graphics);
-
-	inline const PathPaintInd &get(int i) const {
-		return paints[i];
-	}
-
-	inline int getNumPaints() const {
-		return size.paint;
-	}
-
-	inline int getNumGradients() const {
-		return size.gradient;
-	}
-};
-
-typedef SharedPtr<PaintIndices> PaintIndicesRef;
-
 class Graphics : public Referencable, public Observer {
 private:
 	std::vector<PathRef> paths;
@@ -98,7 +78,6 @@ private:
 
 	PaintRef fillColor;
 	PaintRef strokeColor;
-	PaintIndex paintSize;
 
 	float strokeWidth;
 	std::vector<float> strokeDashes;
@@ -109,7 +88,6 @@ private:
 	int fillRule;
 
 	ToveChangeFlags changes;
-	PaintIndicesRef paintIndices;
 
 	inline const PathRef &current() const {
 		return paths[paths.size() - 1];
@@ -157,7 +135,7 @@ public:
 	Graphics();
 	Graphics(const ClipSetRef &clipSet);
 	Graphics(const NSVGimage *image);
-	Graphics(const Graphics *graphics, bool clonePaths);
+	Graphics(const GraphicsRef &graphics);
 
 	inline ~Graphics() {
 		clear();
@@ -175,8 +153,7 @@ public:
 		fillColor = color;
 	}
 
-	bool areColorsSolid();
-	PaintIndicesRef getPaintIndices();
+	bool areColorsSolid() const;
 
 	void setLineDash(const float *dashes, int count);
 
@@ -190,9 +167,6 @@ public:
 
 	ToveLineJoin getLineJoin() const;
 	void setLineJoin(ToveLineJoin join);
-
-	ToveLineCap getLineCap() const;
-	void setLineCap(ToveLineCap cap);
 
 	inline void setMiterLimit(float limit) {
 		this->miterLimit = limit;
@@ -214,7 +188,6 @@ public:
 	}
 
 	void addPath(const PathRef &path);
-	void removePath(const PathRef &path);
 
 	inline int getNumPaths() const {
 		return paths.size();
@@ -242,9 +215,6 @@ public:
 		if (flags & (CHANGED_GEOMETRY | CHANGED_POINTS | CHANGED_BOUNDS)) {
 			flags |= CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS;
 		}
-		if (flags & (CHANGED_GEOMETRY | CHANGED_LINE_ARGS | CHANGED_FILL_ARGS)) {
-			flags |= CHANGED_PAINT_INDICES;
-		}
 		changes |= flags;
 	}
 
@@ -256,8 +226,6 @@ public:
 	void clearChanges(ToveChangeFlags flags);
 
 	void animate(const GraphicsRef &a, const GraphicsRef &b, float t);
-	static bool morphify(const std::vector<GraphicsRef> &graphics);
-	void rotate(ToveElementType what, int k);
 
 	void computeClipPaths(const AbstractTesselator &tess) const;
 

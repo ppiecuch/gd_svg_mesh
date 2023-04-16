@@ -1,19 +1,20 @@
 /*
- * TÖVE - Animated vector graphics for LÖVE.
- * https://github.com/poke1024/tove2d
- *
- * Copyright (c) 2018, Bernhard Liebl
- *
- * Distributed under the MIT license. See LICENSE file for details.
- *
- * All rights reserved.
- */
+* TÖVE - Animated vector graphics for LÖVE.
+* https://github.com/poke1024/tove2d
+*
+* Copyright (c) 2018, Bernhard Liebl
+*
+* Distributed under the MIT license. See LICENSE file for details.
+*
+* All rights reserved.
+*/
 
 #include "subpath.h"
 #include "utils.h"
 #include "path.h"
 #include "intersect.h"
-#include <algorithm>
+
+#include <cmath>
 
 BEGIN_TOVE_NAMESPACE
 
@@ -29,7 +30,7 @@ float *Subpath::addPoints(int n, bool allowClosedEdit) {
 	nsvg.pts = static_cast<float*>(
 		realloc(nsvg.pts, cpts * 2 * sizeof(float)));
 	if (!nsvg.pts) {
-		throw std::bad_alloc();
+		CRASH_NOW_MSG("Bad allocation.");
 	}
 	float *p = &nsvg.pts[nsvg.npts * 2];
 	nsvg.npts += n;
@@ -102,7 +103,7 @@ Subpath::Subpath(const NSVGpath *path) {
 	const size_t size = path->npts * 2 * sizeof(float);
 	nsvg.pts = static_cast<float*>(malloc(size));
 	if (!nsvg.pts) {
-		throw std::bad_alloc();
+		CRASH_NOW_MSG("Bad allocation.");
 	}
 	std::memcpy(nsvg.pts, path->pts, size);
 	for (int i = 0; i < 4; i++) {
@@ -118,7 +119,7 @@ Subpath::Subpath(const SubpathRef &t) {
 	const size_t size = nsvg.npts * 2 * sizeof(float);
 	nsvg.pts = static_cast<float*>(malloc(size));
 	if (!nsvg.pts) {
-		throw std::bad_alloc();
+		CRASH_NOW_MSG("Bad allocation.");
 	}
 	std::memcpy(nsvg.pts, t->nsvg.pts, size);
 	for (int i = 0; i < 4; i++) {
@@ -290,7 +291,7 @@ void Subpath::removeCurve(int curve) {
 
 	const int nc = ncurves(nsvg.npts);
 	curve -= 1;
-	curve = umod(curve, nc);
+	curve = (curve % nc + nc) % nc;
 
 	const int i = std::max(curve * 3, 0);
 	float *pts = nsvg.pts;
@@ -468,7 +469,7 @@ static void alignHandle(
 	float *cp1) {
 
 	float newphi;
-	polar(px, py, p0x, p0y, &newphi);
+	const float newmag = polar(px, py, p0x, p0y, &newphi);
 
 	const float cp1mag = polar(cp1[0], cp1[1], p0x, p0y);
 
@@ -538,7 +539,7 @@ void Subpath::makeSmooth(int k, int dir, float a) {
 	const int n = nsvg.npts - (closed ? 1 : 0);
 
 	if (closed) {
-		k = umod(k, n);
+		k = (k % n + n) % n;
 	}
 
 	if (n < 3 || k < 0 || k >= n) {
@@ -627,174 +628,12 @@ void Subpath::makeSmooth(int k, int dir, float a) {
 	changed(CHANGED_POINTS);
 }
 
-struct Points {
-	const float * const pts;
-	
-	inline Points(const float *pts) : pts(pts) {
-	}
-
-	inline vec2 operator[](const int i) const {
-		return vec2(pts[2 * (3 * i) + 0], pts[2 * (3 * i) + 1]);
-	}
-};
-
-ToveCurvature *Subpath::saveCurvature() {
-	float * const pts = nsvg.pts;
-	const bool closed = isClosed();
-
-	const int npts = nsvg.npts;
-	const int nc = ncurves(npts);
-	curvature.resize(nc);
-
-	int k0 = closed ? (find_unequal_backward(Points(pts), nc, nc) * 3) : 0;
-	int k2 = find_unequal_forward(Points(pts), 0, nc) * 3;
-
-	for (int i = 0, k1 = 0; i < nc; i++, k1 += 3) {
-		if (k1 == k2) {
-			k0 = k2 - 3;
-			k2 = find_unequal_forward(Points(pts), k1 / 3, nc) * 3;
-
-			if (!closed && k2 < k1) {
-				k2 = (nc - 1) * 3;
-			}
-		}
-
-		float x0 = pts[2 * k0 + 0];
-		float y0 = pts[2 * k0 + 1];
-
-		float x1 = pts[2 * k1 + 0];
-		float y1 = pts[2 * k1 + 1];
-
-		float x2 = pts[2 * k2 + 0];
-		float y2 = pts[2 * k2 + 1];
-
-		const float m0 = vec2(x1 - x0, y1 - y0).magnitude();
-		const float m2 = vec2(x1 - x2, y1 - y2).magnitude();
-
-		const float dx0 = pts[2 * (k0 + 2) + 0] - x1;
-		const float dy0 = pts[2 * (k0 + 2) + 1] - y1;
-
-		const float dx1 = pts[2 * (k1 + 1) + 0] - x1;
-		const float dy1 = pts[2 * (k1 + 1) + 1] - y1;
-
-		const float l0 = vec2(dx0, dy0).magnitude() / m0;
-		const float l1 = vec2(dx1, dy1).magnitude() / m2;
-
-		ToveCurvature &c = curvature[i];
-
-		if (l0 + l1 < 1e-5) {
-			c.balance = 0;
-			c.curvature = 0;
-			c.angle1 = 0;
-			c.angle2 = 0;
-			continue;
-		}
-
-		c.balance = (l0 + l0) / (l0 + l1);
-		c.curvature = (l0 + l1) / 2;
-
-		const vec2 nr(y2 - y0, x2 - x0);
-
-		if (std::abs(nr.magnitude()) < 1e-5) {
-			c.angle1 = std::atan2(dy0, dx0);
-			c.angle2 = std::atan2(dy1, dx1);
-		} else {
-			c.angle1 = vec2(dy0, dx0).angle(nr);
-			c.angle2 = vec2(dy1, dx1).angle(nr);
-		}
-
-#if 0
-		// debug code. assert invariance.
-
-		const vec2 n0(x2 - x0, y2 - y0);
-		const vec2 n = n0 * (c.curvature / n0.magnitude());
-
-		const vec2 v0 = n.rotated(c.angle1) * (m0 * c.balance);
-		float ex = pts[2 * (k0 + 2) + 0] - (x1 + v0.x);
-		float ey = pts[2 * (k0 + 2) + 1] - (y1 + v0.y);
-		if (vec2(ex, ey).magnitude() > 0.1) {
-			printf("Error in %p %d\n", this, i);
-		}
-
-		const vec2 v1 = n.rotated(c.angle2) * (m2 * (2.0f - c.balance));
-		ex = pts[2 * (k1 + 1) + 0] - (x1 + v1.x);
-		ey = pts[2 * (k1 + 1) + 1] - (y1 + v1.y);
-		if (vec2(ex, ey).magnitude() > 0.1) {
-			printf("Error in %p %d\n", this, i);
-		}
-#endif
-	}
-
-	return curvature.data();
-}
-
-bool Subpath::restoreCurvature() {
-	float * const pts = nsvg.pts;
-	const bool closed = isClosed();
-
-	const int npts = nsvg.npts;
-	const int nc = ncurves(npts);
-
-	if (curvature.size() != nc) {
-		return false;
-	}
-
-	int k0 = closed ? (find_unequal_backward(Points(pts), nc, nc) * 3) : 0;
-	int k2 = find_unequal_forward(Points(pts), 0, nc) * 3;
-
-	for (int i = 0, k1 = 0; i < nc; i++, k1 += 3) {
-		if (k1 == k2) {
-			k0 = k2 - 3;
-			k2 = find_unequal_forward(Points(pts), k1 / 3, nc) * 3;
-
-			if (!closed && k2 < k1) {
-				k2 = (nc - 1) * 3;
-			}
-		}
-
-		float x0 = pts[2 * k0 + 0];
-		float y0 = pts[2 * k0 + 1];
-
-		float x1 = pts[2 * k1 + 0];
-		float y1 = pts[2 * k1 + 1];
-
-		float x2 = pts[2 * k2 + 0];
-		float y2 = pts[2 * k2 + 1];
-
-		float m0 = vec2(x1 - x0, y1 - y0).magnitude();
-		float m2 = vec2(x1 - x2, y1 - y2).magnitude();
-
-		const ToveCurvature &c = curvature[i];
-
-		vec2 n0(x2 - x0, y2 - y0);
-
-		if (std::abs(n0.magnitude()) < 1e-5) {
-			n0 = vec2(1, 0);
-		}
-
-		const vec2 n = n0 * (c.curvature / n0.magnitude());
-
-		const vec2 v0 = n.rotated(c.angle1) * (m0 * c.balance);
-		pts[2 * (k0 + 2) + 0] = x1 + v0.x;
-		pts[2 * (k0 + 2) + 1] = y1 + v0.y;
-
-		const vec2 v1 = n.rotated(c.angle2) * (m2 * (2.0f - c.balance));
-		pts[2 * (k1 + 1) + 0] = x1 + v1.x;
-		pts[2 * (k1 + 1) + 1] = y1 + v1.y;
-	}
-
-	fixLoop();
-	changed(CHANGED_POINTS);
-
-	return true;
-}
-
 void Subpath::move(int k, float x, float y, ToveHandle handle) {
 	const bool closed = isClosed();
 	const int n = nsvg.npts - (closed ? 1 : 0);
 
 	if (closed) {
-		k = umod(k, n);
+		k = (k % n + n) % n;
 	}
 
 	if (n < 3 || k < 0 || k >= n) {
@@ -872,78 +711,6 @@ void Subpath::move(int k, float x, float y, ToveHandle handle) {
 	changed(CHANGED_POINTS);
 }
 
-void Subpath::rotate(ToveElementType what, int k) {
-	float *pts = nsvg.pts;
-	const int n = nsvg.npts;
-	switch (what) {
-		case TOVE_CURVE: {
-			std::rotate(pts, pts + 2 * umod(3 * k, n), pts + 2 * n);
-			fixLoop();
-		} break;
-		case TOVE_POINT: {
-			std::rotate(pts, pts + 2 * umod(k, n), pts + 2 * n);
-			fixLoop();
-		} break;
-		default: {
-			// noop
-		} break;
-	}
-}
-
-void Subpath::refine(const int factor) {
-	if (factor < 2) {
-		return;
-	}
-	const int n = getNumCurves(false);
-	for (int j = n - 1; j >= 0; j--) {
-		for (int i = factor; i > 1; i--) {
-			const float dt = 1.0f / i;
-			insertCurveAt(j + 1 - dt);
-		}
-	}
-}
-
-int gcd(int m, int n) {
-	while(m) {
-		const int t = m;
-		m = n % m;
-		n = t;
-	}
-	return n;
-}
- 
-inline int lcm(int m, int n) {
-	return m / gcd(m, n) * n;
-}
- 
-int lcm(const std::vector<int> &n) {
-	if (n.size() < 2) {
-		return 0;
-	}
-	int x = n[0];
-	for (int i = 1; i < n.size(); i++) {
-		x = lcm(x, n[i]);
-	}
-	return x;
-}
-
-bool Subpath::morphify(const std::vector<SubpathRef> &subpaths) {
-	std::vector<int> n;
-	n.reserve(subpaths.size());
-	for (const auto &subpath : subpaths) {
-		const int m = subpath->getNumCurves(false);
-		if (m < 1) {
-			return false;
-		}
-		n.push_back(m);
-	}
-	const int common = lcm(n);
-	for (int i = 0; i < n.size(); i++) {
-		subpaths[i]->refine(common / n[i]);
-	}
-	return true;
-}
-
 void Subpath::setPoints(const float *pts, int npts, bool add_loop) {
 	const bool loop = add_loop && isClosed() && npts > 0;
 	const int n1 = npts + (loop ? 1 : 0);
@@ -964,9 +731,9 @@ bool Subpath::isCollinear(int u, int v, int w) const {
 	}
 	const float *pts = nsvg.pts;
 
-	u = umod(u, n);
-	v = umod(v, n);
-	w = umod(w, n);
+	u = (u % n + n) % n;
+	v = (v % n + n) % n;
+	w = (w % n + n) % n;
 
 	const float Ax = pts[2 * u + 0];
 	const float Ay = pts[2 * u + 1];
@@ -1103,7 +870,6 @@ void Subpath::setCommandValue(int commandIndex, int what, float value) {
 				case 101: command.ellipse.cy = value; break;
 				case 102: command.ellipse.rx = value; break;
 				case 103: command.ellipse.ry = value; break;
-				case 104: command.ellipse.rx = value; command.ellipse.ry = value; break;
 			}
 			command.dirty = true;
 			dirty |= DIRTY_COMMANDS;
@@ -1119,7 +885,7 @@ void Subpath::setCommandValue(int commandIndex, int what, float value) {
 void Subpath::setCommandDirty(int commandIndex) {
 	const int n = commands.size();
 	if (isClosed()) {
-		commandIndex = umod(commandIndex, n);
+		commandIndex = (commandIndex % n + n) % n;
 	}
 	if (commandIndex < 0 ||commandIndex >= n) {
 		return;
@@ -1180,7 +946,7 @@ void Subpath::fixLoop() {
 }
 
 void Subpath::setIsClosed(bool closed) {
-	if (bool(nsvg.closed) == closed) {
+	if (nsvg.closed == closed) {
 		return;
 	}
 
@@ -1228,23 +994,15 @@ bool Subpath::computeShaderCurveData(
 	extended.endpoints.p2[0] = pts[6];
 	extended.endpoints.p2[1] = pts[7];
 
-#if 0
-	printf("%d (%f, %f) (%f, %f) (%f, %f) (%f, %f)\n", target,
-		pts[0], pts[1],
-		pts[2], pts[3],
-		pts[4], pts[5],
-		pts[6], pts[7]);
-#endif
-
 	// write curve data.
 	for (int i = 0; i < 4; i++) {
-		store_gpu_float(curveTexturesData[i], bx[i]);
-		store_gpu_float(curveTexturesData[i + 4], by[i]);
+		curveTexturesData[i]  =  bx[i];
+		curveTexturesData[i + 4] = by[i];
 	}
 	curveTexturesData += 8;
 
 	for (int i = 0; i < 4; i++) {
-		store_gpu_float(curveTexturesData[i], curveData.bounds.bounds[i]);
+		curveTexturesData[i] = curveData.bounds.bounds[i];
 	}
 	curveTexturesData += 4;
 
@@ -1343,7 +1101,7 @@ void Subpath::invert() {
 	const size_t size = n * 2 * sizeof(float);
 	float *pts = static_cast<float*>(malloc(size));
 	if (!pts) {
-		throw std::bad_alloc();
+		CRASH_NOW_MSG("Bad allocation.");
 	}
 	for (int i = 0; i < n; i++) {
 		const int j = n - 1 - i;
@@ -1360,7 +1118,7 @@ void Subpath::invert() {
 	changed(CHANGED_POINTS);
 }
 
-void Subpath::clean(const float eps) {
+void Subpath::clean(float eps) {
 	commit();
 	const int n = nsvg.npts;
 
@@ -1381,57 +1139,13 @@ void Subpath::clean(const float eps) {
 	}
 	cleaned.insert(cleaned.end(), &nsvg.pts[copied * 2], &nsvg.pts[n * 2]);
 
-	if (cleaned.size() < nsvg.npts * 2) {
+	if (cleaned.size() < (int32_t)nsvg.npts * 2) {
 		nsvg.npts = cleaned.size() / 2;
 		std::memcpy(nsvg.pts, &cleaned[0], sizeof(float) * cleaned.size());
 
 		commands.clear();
 		changed(CHANGED_GEOMETRY);
 	}
-
-	/*commit();
-
-	const int n = nsvg.npts;
-	float * const pts = nsvg.pts;
-
-	SubpathCleaner cleaner;
-	cleaner.init(n);
-
-	int m = 0;
-	for (int i = 0; i + 4 <= n; i += 3) {
-		cleaner.add(pts[i * 2  + 0], pts[i * 2 + 1], i);
-		m++;
-	}
-	const int newM = cleaner.clean(eps, false);
-
-	const auto &newIndices = cleaner.getIndices();
-	std::vector<ToveVertexIndex> indices(newIndices);
-	indices.push_back(n + 10);
-
-	int k = 0;
-	m = 0;
-
-	for (int i = 0; i + 4 <= n; i += 3) {
-		if (indices[k] >= i + 3) {
-			// skip
-		} else {
-			for (int j = 0; j < 3; j++) {
-				pts[m * 2 + 0] = pts[(i + j) * 2 + 0];
-				pts[m * 2 + 1] = pts[(i + j) * 2 + 1];
-				m++;
-			}
-			while (indices[k] < i + 3) {
-				k++;
-			}
-		}
-	}
-
-	if (m < nsvg.npts) {
-		nsvg.npts = m;
-
-		commands.clear();
-		changed(CHANGED_GEOMETRY);
-	}*/
 }
 
 ToveOrientation Subpath::getOrientation() const {
@@ -1457,7 +1171,7 @@ float Subpath::getPointValue(int index, int dim) {
 	int n = nsvg.npts;
 	if (isClosed()) {
 		n -= 1;
-		index = umod(index, n);
+		index = (index % n + n) % n;
 	}
 	if (index >= 0 && index < n && (dim & 1) == dim) {
 		commit();
@@ -1471,7 +1185,7 @@ void Subpath::setPointValue(int index, int dim, float value) {
 	int n = nsvg.npts;
 	if (isClosed()) {
 		n -= 1;
-		index = umod(index, n);
+		index = (index % n + n) % n;
 	}
 	if (index >= 0 && index < n && (dim & 1) == dim) {
 		commit();
@@ -1677,53 +1391,6 @@ ToveNearest Subpath::nearest(
 		return nearest;
 	} else {
 		return nearest;
-	}
-}
-
-
-bool SubpathCleaner::reduce(float eps, bool addVanishing) {
-	pts[n] = pts[0];
-	indices[n] = indices[0];
-
-	pts[n + 1] = pts[1];
-	indices[n + 1] = indices[1];
-
-	const NonVanishingAreas nv(good.data(), eps);
-	computeFromAreas(pts.data(), n, nv);
-
-	int j = 0;
-	int skip = 0;
-
-	for (int i = 0; i < n; i++) {
-		if (skip > 0) {
-			skip -= 1;
-
-			continue;
-		} else if (!good[i]) {
-			skip = 1;
-
-			if (addVanishing) {
-				vanishing.add(
-					indices[i + 0],
-					indices[i + 1],
-					indices[i + 2]);
-			}
-
-			if (i == n - 1) {
-				continue;
-			}
-		}
-
-		pts[j] = pts[i];
-		indices[j] = indices[i];
-		j++;
-	}
-
-	if (j < n) {
-		n = j;
-		return true;
-	} else {
-		return false;
 	}
 }
 

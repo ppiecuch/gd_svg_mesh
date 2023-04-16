@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  vg_gradient.h 	                                                     */
+/*  vg_gradient.h                                                        */
 /*************************************************************************/
 
 #ifndef VG_GRADIENT_H
@@ -11,18 +11,17 @@
 class VGGradient : public VGPaint {
 	GDCLASS(VGGradient, VGPaint);
 
-    Ref<Gradient> color_ramp;
-
-    void _gradient_changed();
+	Ref<Gradient> color_ramp;
+	void _gradient_changed();
 
 protected:
 	static void _bind_methods();
 
 public:
-    VGGradient();
+	void set_color_ramp(const Ref<Gradient> &p_color_ramp);
+	Ref<Gradient> get_color_ramp() const;
 
-    void set_color_ramp(const Ref<Gradient> &p_color_ramp);
-    Ref<Gradient> get_color_ramp() const;
+	VGGradient();
 };
 
 #endif // VG_GRADIENT_H

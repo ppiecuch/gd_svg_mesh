@@ -322,11 +322,10 @@ ClipperPaths AbstractAdaptiveFlattener::computeDashes(
 	ClipperPaths dashes;
 	const float *dashArray = shape->strokeDashArray;
 
-	float dashLength = 0.0;
+	float dashLength = 0;
 	for (int i = 0; i < dashCount; i++) {
 		dashLength += dashArray[i];
 	}
-	(void)dashLength;
 
 	for (int i = 0; i < lines.size(); i++) {
 		const ClipperPath &path = lines[i];
@@ -418,12 +417,10 @@ void AbstractAdaptiveFlattener::flatten(
 		ClipperPaths stroke;
 		ClipperLib::ClosedPathsFromPolyTree(tesselation.stroke, stroke);
 
-		if (path->hasNormalFillStrokeOrder()) {
-			ClipperLib::Clipper clipper;
-			clipper.AddPaths(tesselation.fill, ClipperLib::ptSubject, true);
-			clipper.AddPaths(stroke, ClipperLib::ptClip, true);
-			clipper.Execute(ClipperLib::ctDifference, tesselation.fill);
-		}
+		ClipperLib::Clipper clipper;
+		clipper.AddPaths(tesselation.fill, ClipperLib::ptSubject, true);
+		clipper.AddPaths(stroke, ClipperLib::ptClip, true);
+		clipper.Execute(ClipperLib::ctDifference, tesselation.fill);
 	}
 }
 
@@ -466,10 +463,8 @@ int RigidFlattener::flatten(
 	x1234 = (x123+x234)*0.5f;
 	y1234 = (y123+y234)*0.5f;
 
-	index = flatten(vertices, index, level+1,
-		x1,y1, x12,y12, x123,y123, x1234,y1234);
-	index = flatten(vertices, index, level+1,
-		x1234,y1234, x234,y234, x34,y34, x4,y4);
+	index = flatten(vertices, index, level+1, x1,y1, x12,y12, x123,y123, x1234,y1234);
+	index = flatten(vertices, index, level+1, x1234,y1234, x234,y234, x34,y34, x4,y4);
 	return index;
 }
 
@@ -501,15 +496,13 @@ int RigidFlattener::flatten(
 	vertices[0].x = path->pts[0];
 	vertices[0].y = path->pts[1];
 
-	int v = 1;
-	int k = 0;
+	int v = 1, k = 0;
 	for (int i = 0; i < n; i++) {
 		const float *p = &path->pts[k * 2];
 		k += 3;
 
 		const int v0 = v;
-		v = flatten(vertices, v, 0,
-			p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+		v = flatten(vertices, v, 0, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
 		assert(v - v0 == verticesPerCurve);
 	}
 

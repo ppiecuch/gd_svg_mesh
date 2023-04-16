@@ -32,30 +32,6 @@ struct TOVEcachedPaint {
 	int32_t ditherSpan[2];
 };
 
-enum TOVEditherType {
-	TOVE_NSVG_DITHER_NONE,
-	TOVE_NSVG_DITHER_DIFFUSION,
-	TOVE_NSVG_DITHER_ORDERED
-};
-
-struct TOVEnoise {
-	float amount;
-	const float *matrix;
-	int16_t n;
-};
-
-struct TOVErasterizerQuality {
-	struct {
-		TOVEditherType type;
-		const float *matrix;
-		int16_t matrix_width;
-		int16_t matrix_height;
-		float spread;
-	} dither;
-	TOVEnoise noise;
-	void *palette;
-};
-
 typedef void (*TOVEscanlineFunction)(
 	NSVGrasterizer *rasterizer,
 	int x,

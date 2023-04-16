@@ -44,8 +44,8 @@ BEGIN_TOVE_NAMESPACE
 #include "../thirdparty/nanosvg/src/nanosvgrast.h"
 END_TOVE_NAMESPACE
 
+#include "thirdparty/misc/clipper.hpp"
 #include "../thirdparty/polypartition/src/polypartition.h"
-#include "../thirdparty/clipper.hpp"
 
 #if _MSC_VER
 #define M_PI 3.1415926535897932384626433832795
@@ -53,30 +53,10 @@ END_TOVE_NAMESPACE
 
 #include "shared.h"
 #include "tovedebug.h"
-#include "../thirdparty/fp16/include/fp16.h"
 
 BEGIN_TOVE_NAMESPACE
 
 typedef tove_gpu_float_t gpu_float_t;
-
-inline void store_gpu_float(float &p, float x) {
-	p = x;
-}
-
-#if defined(__clang__)  && defined(__F16C__)
-inline void store_gpu_float(uint16_t &p, float x) {
-	*reinterpret_cast<__fp16*>(&p) = x;
-}
-#elif defined(__GNUC__) && defined(__F16C__)
-#include <x86intrin.h>
-inline void store_gpu_float(uint16_t &p, float x) {
-	p = _cvtss_sh(x, 0);
-}
-#else
-inline void store_gpu_float(uint16_t &p, float x) {
-	p = fp16_ieee_from_fp32_value(x);
-}
-#endif
 
 typedef ClipperLib::Path ClipperPath;
 typedef ClipperLib::Paths ClipperPaths;

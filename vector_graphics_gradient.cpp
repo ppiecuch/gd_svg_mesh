@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  vg_gradient.cp          	                                             */
+/*  vg_gradient.cp                                                       */
 /*************************************************************************/
 
 #include "vector_graphics_gradient.h"
@@ -15,8 +15,7 @@ void VGGradient::_bind_methods() {
 }
 
 VGGradient::VGGradient() {
-	Ref<Gradient> g;
-	g.instance();
+	Ref<Gradient> g = memnew(Gradient);
 	set_color_ramp(g);
 }
 
@@ -39,5 +38,5 @@ void VGGradient::set_color_ramp(const Ref<Gradient> &p_color_ramp) {
 }
 
 Ref<Gradient> VGGradient::get_color_ramp() const {
-    return color_ramp;
+	return color_ramp;
 }

@@ -11,12 +11,12 @@ sources += Glob("thirdparty/tove2d/src/cpp/*.cpp")
 sources += Glob("thirdparty/tove2d/src/cpp/mesh/*.cpp")
 sources += Glob("thirdparty/tove2d/src/cpp/shader/*.cpp")
 sources += Glob("thirdparty/tove2d/src/cpp/gpux/*.cpp")
-sources += Glob("thirdparty/tove2d/src/thirdparty/*.cpp")
-sources += Glob("thirdparty/tove2d/src/thirdparty/polypartition/src/*.cpp")
-sources += Glob("thirdparty/tove2d/src/thirdparty/tinyxml2/tinyxml2.cpp")
+sources += Glob("thirdparty/*.cpp")
+sources += Glob("thirdparty/polypartition/src/*.cpp")
+sources += Glob("thirdparty/tinyxml2/tinyxml2.cpp")
 
 env_module.Append(CPPDEFINES=["TOVE_GODOT"])
-env_module.Append(CPPPATH=[os.path.realpath(os.curdir), "#modules/gdextensions", "thirdparty", "thirdparty/tove2d/src/thirdparty/fp16/include"])
+env_module.Append(CPPPATH=[os.path.realpath(os.curdir), "#modules/gdextensions", "thirdparty"])
 
 
 def package_sl(target, source, env):

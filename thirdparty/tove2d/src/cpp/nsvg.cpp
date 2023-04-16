@@ -11,9 +11,9 @@
 
 #include "nsvg.h"
 #include "utils.h"
-#include "palette.h"
 
-#include "../thirdparty/robin-map/include/tsl/robin_map.h"
+#include <unordered_map>
+
 #include "../thirdparty/tinyxml2/tinyxml2.h"
 
 #if TOVE_DEBUG
@@ -46,13 +46,13 @@ class NanoSVGEnvironment {
 
 public:
 	inline NanoSVGEnvironment() {
-		// setting the locale here is important! nsvg relies
-		// on sscanf to parse floats and units in the svg and
-		// this will break with non-en locale (same with strtof).
+	// setting the locale here is important! nsvg relies
+	// on sscanf to parse floats and units in the svg and
+	// this will break with non-en locale (same with strtof).
 
-		// sometimes, on non-English systems, "42.5%" would get
-		// parsed as "42.0", with a unit of ".5%", which messed
-		// everything up. setting the locale here fixes this.
+	// sometimes, on non-English systems, "42.5%" would get
+	// parsed as "42.0", with a unit of ".5%", which messed
+	// everything up. setting the locale here fixes this.
 
 #if NSVG_SCOPE_LOCALE
 	    previousLocale = setlocale(LC_NUMERIC, nullptr);
@@ -104,13 +104,7 @@ class NanoSVGVisitor : public tinyxml2::XMLVisitor {
 	const XMLDocument *mCurrentDocument;
 	bool mSkipDefs;
 
-	typedef tsl::robin_map<
-		const char*,
-		const XMLElement*,
-		hash_cstr,
-		equal_cstr,
-		std::allocator<std::pair<const char*, const XMLElement*>>,
-		true /* store hash */> ElementsMap;
+	typedef std::unordered_map<const char*, const XMLElement*> ElementsMap;
 	std::unique_ptr<ElementsMap> mElementsById;
 
 	void gatherIds(const XMLElement *parent) {
@@ -162,15 +156,6 @@ public:
 		const XMLElement *defs = doc.RootElement()->FirstChildElement("defs");
 		while (defs) {
 			defs->Accept(this);
-
-			// we handle <clipPath>s separately, as nanosvg will ignore them
-			// inside the <defs> tag by default.
-			const XMLElement *clipPath = defs->FirstChildElement("clipPath");
-			while (clipPath) {
-				clipPath->Accept(this);
-				clipPath = clipPath->NextSiblingElement("clipPath");
-			}
-
 			defs = defs->NextSiblingElement("defs");
 		}
 		mSkipDefs = true;
@@ -184,15 +169,11 @@ public:
     }
 
     virtual bool VisitEnter(const XMLElement &element, const XMLAttribute *firstAttribute) {
-		if (strcmp(element.Name(), "mask") == 0) {
-			return false; // ignore
-		}
-
     	if (mSkipDefs && strcmp(element.Name(), "defs") == 0 &&
 			element.Parent() == mCurrentDocument->RootElement()) {
 			
-			// already handled in VisitEnter(const XMLDocument &doc)
-			return false;
+			// already handled in l VisitEnter(const XMLDocument &doc)
+			return true;
 		}
     	if (strcmp(element.Name(), "use") == 0) {
     		const char *href = element.Attribute("href");
@@ -277,27 +258,9 @@ const ToveRasterizeSettings *getDefaultRasterizeSettings() {
 
 		defaultSettings.tessTolerance = rasterizer->tessTol;
 		defaultSettings.distTolerance = rasterizer->distTol;
-
-		defaultSettings.quality.dither.type = TOVE_DITHER_NONE;
-		defaultSettings.quality.dither.matrix = nullptr;
-		defaultSettings.quality.dither.matrix_width = 0;
-		defaultSettings.quality.dither.matrix_height = 0;
-		defaultSettings.quality.dither.spread = 1.0f;
-
-		defaultSettings.quality.noise.amount = 0.0f;
-		defaultSettings.quality.noise.matrix = nullptr;
-		defaultSettings.quality.noise.n = 0;
-		defaultSettings.quality.palette.ptr = nullptr;
 	}
 
 	return &defaultSettings;
-}
-
-inline TOVEditherType convertToveDitherType(ToveDitherType t) {
-	static_assert(int(TOVE_DITHER_NONE) == int(TOVE_NSVG_DITHER_NONE), "Dihtering configuration failed.");
-	static_assert(int(TOVE_DITHER_DIFFUSION) == int(TOVE_NSVG_DITHER_DIFFUSION), "Dihtering configuration failed.");
-	static_assert(int(TOVE_DITHER_ORDERED) == int(TOVE_NSVG_DITHER_ORDERED), "Dihtering configuration failed.");
-	return TOVEditherType(t);
 }
 
 static NSVGrasterizer *getRasterizer(
@@ -315,17 +278,6 @@ static NSVGrasterizer *getRasterizer(
 
 	rasterizer->tessTol = settings->tessTolerance;
 	rasterizer->distTol = settings->distTolerance;
-
-	rasterizer->quality.dither.type = convertToveDitherType(settings->quality.dither.type);
-	rasterizer->quality.dither.matrix = settings->quality.dither.matrix;
-	rasterizer->quality.dither.matrix_width = settings->quality.dither.matrix_width;
-	rasterizer->quality.dither.matrix_height = settings->quality.dither.matrix_height;
-	rasterizer->quality.dither.spread = settings->quality.dither.spread;
-
-	rasterizer->quality.noise.amount = settings->quality.noise.amount;
-	rasterizer->quality.noise.matrix = settings->quality.noise.matrix;
-	rasterizer->quality.noise.n = settings->quality.noise.n;
-	rasterizer->quality.palette = settings->quality.palette.ptr;
 
 	rasterizer->nedges = 0;
 	rasterizer->npoints = 0;
@@ -600,30 +552,6 @@ ToveLineJoin toveLineJoin(NSVGlineJoin join) {
 			return TOVE_LINEJOIN_BEVEL;
 	}
 	return TOVE_LINEJOIN_MITER;
-}
-
-NSVGlineCap nsvgLineCap(ToveLineCap cap) {
-	switch (cap) {
-		case TOVE_LINECAP_BUTT:
-			return NSVG_CAP_BUTT;
-		case TOVE_LINECAP_ROUND:
-			return NSVG_CAP_ROUND;
-		case TOVE_LINECAP_SQUARE:
-			return NSVG_CAP_SQUARE;
-	}
-	return NSVG_CAP_BUTT;
-}
-
-ToveLineCap toveLineCap(NSVGlineCap cap) {
-	switch (cap) {
-		case NSVG_CAP_BUTT:
-			return TOVE_LINECAP_BUTT;
-		case NSVG_CAP_ROUND:
-			return TOVE_LINECAP_ROUND;
-		case NSVG_CAP_SQUARE:
-			return TOVE_LINECAP_SQUARE;
-	}
-	return TOVE_LINECAP_BUTT;
 }
 } // namespace nsvg
 

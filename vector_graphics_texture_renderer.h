@@ -11,27 +11,23 @@
 class VGSpriteRenderer : public VGRenderer {
 	GDCLASS(VGSpriteRenderer, VGRenderer);
 
-    float quality;
+	float quality;
 
 protected:
 	static void _bind_methods();
 
 public:
-    VGSpriteRenderer();
+	VGSpriteRenderer();
 
-    virtual bool prefer_sprite() const {
-        return true;
-    }
+	virtual bool prefer_sprite() const { return true; }
 
-    float get_quality();
-    void set_quality(float p_quality);
+	float get_quality();
+	void set_quality(float p_quality);
 
-    virtual void render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial);
-    virtual Ref<ImageTexture> render_texture(VGPath *p_path, bool p_hq);
+	virtual Rect2 render_mesh(Ref<ArrayMesh> &p_mesh, Ref<Material> &r_material, Ref<Texture> &r_texture, VGPath *p_path, bool p_hq, bool p_spatial);
+	virtual Ref<ImageTexture> render_texture(VGPath *p_path, bool p_hq);
 
-    virtual bool is_dirty_on_transform_change() const {
-        return true;
-    }
+	virtual bool is_dirty_on_transform_change() const { return true; }
 };
 
 #endif // VG_TEXTURE_RENDERER_H

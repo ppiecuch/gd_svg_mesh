@@ -27,11 +27,6 @@ typedef enum {
 } ToveTrianglesMode;
 
 typedef enum {
-	TOVE_GLSL2,
-	TOVE_GLSL3
-} ToveShaderLanguage;
-
-typedef enum {
 	TOVE_POINT,
 	TOVE_CURVE,
 	TOVE_SUBPATH,
@@ -76,6 +71,12 @@ typedef enum {
 	TOVE_ORIENTATION_CW = 0,
 	TOVE_ORIENTATION_CCW = 1
 } ToveOrientation;
+
+typedef enum {
+	TOVE_HOLES_NONE,
+	TOVE_HOLES_CW,
+	TOVE_HOLES_CCW
+} ToveHoles;
 
 typedef enum {
 	TOVE_HANDLE_FREE,

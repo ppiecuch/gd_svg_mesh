@@ -27,7 +27,7 @@ class VGPath : public Node2D {
 
 	static void set_inherited_dirty(Node *p_node);
 	static void compose_graphics(const tove::GraphicsRef &p_tove_graphics,
-		const Transform2D &p_transform, const Node *p_node);
+	const Transform2D &p_transform, const Node *p_node);
 	static void _transform_changed(Node *p_node);
 
 	bool inherits_renderer() const;
@@ -93,12 +93,12 @@ public:
 
 	Node2D *create_mesh_node();
 
+	static VGPath *create_from_svg(Ref<Resource> p_resource);
+	void import_svg(const String &p_path);
+
 	VGPath();
 	VGPath(tove::PathRef p_path);
 	virtual ~VGPath();
-
-	static VGPath *create_from_svg(Ref<Resource> p_resource);
-	void import_svg(const String &p_path);
 };
 
 #endif // VG_PATH_H

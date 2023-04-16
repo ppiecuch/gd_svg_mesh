@@ -276,7 +276,7 @@ void VGPath::update_mesh_representation() {
 		if (renderer.is_valid()) {
 			Ref<Material> ignored_material; // ignored
 			Ref<Texture> ignored_texture; // ignored
-			renderer->render_mesh(mesh, ignored_material, ignored_texture, this, false, false);
+			const Rect2 area = renderer->render_mesh(mesh, ignored_material, ignored_texture, this, false, false);
 			texture = renderer->render_texture(this, false);
 		}
 	}
@@ -721,7 +721,6 @@ Node2D *VGPath::create_mesh_node() {
 			Sprite *sprite = memnew(Sprite);
 			sprite->set_texture(renderer->render_texture(this, true));
 
-			//Size2 s = get_global_transform().get_scale();
 			Size2 s = get_transform().get_scale();
 			float scale = MAX(s.width, s.height);
 
@@ -735,11 +734,13 @@ Node2D *VGPath::create_mesh_node() {
 			return sprite;
 		} else {
 			MeshInstance2D *mesh_inst = memnew(MeshInstance2D);
-			Ref<ArrayMesh> mesh;
-			mesh.instance();
+			Ref<ArrayMesh> mesh = memnew(ArrayMesh);
 			Ref<Material> material;
 			Ref<Texture> texture;
-			renderer->render_mesh(mesh, material, texture, this, true, false);
+			const Rect2 area = renderer->render_mesh(mesh, material, texture, this, true, false);
+			if (area.is_equal_approx(Rect2())) {
+				return nullptr;
+			}
 			mesh_inst->set_mesh(mesh);
 			if (material.is_valid()) {
 				mesh_inst->set_material(material);
@@ -754,7 +755,7 @@ Node2D *VGPath::create_mesh_node() {
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 void VGPath::set_tove_path(tove::PathRef p_path) {

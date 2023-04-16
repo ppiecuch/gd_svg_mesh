@@ -19,9 +19,9 @@
 BEGIN_TOVE_NAMESPACE
 
 void Path::setSubpathCount(int n) {
-	if (subpaths.size() != n) {
+	if (subpaths.size() != (int32_t)n) {
 		removeSubpaths();
-		while (subpaths.size() < n) {
+		while (subpaths.size() < (int32_t)n) {
 			addSubpath(tove_make_shared<Subpath>());
 		}
 	}
@@ -44,10 +44,6 @@ void Path::_append(const SubpathRef &trajectory) {
 void Path::_setFillColor(const PaintRef &color) {
 	if (fillColor == color) {
 		return;
-	}
-
-	if ((fillColor.get() != nullptr) != (color.get() != nullptr)) {
-		changed(CHANGED_FILL_ARGS);
 	}
 
 	if (fillColor) {
@@ -100,17 +96,6 @@ bool Path::areColorsSolid() const {
 		nsvg.fill.type <= NSVG_PAINT_COLOR;
 }
 
-PathPaintInd Path::createPaintIndices(PaintIndex &it) const {
-	PathPaintInd ind;
-	if (nsvg.stroke.type != NSVG_PAINT_NONE) {
-		ind.line = it.use(nsvg.stroke.type);
-	}
-	if (nsvg.fill.type != NSVG_PAINT_NONE) {
-		ind.fill = it.use(nsvg.fill.type);
-	}
-	return ind;
-}
-
 void Path::set(const NSVGshape *shape) {
 	memset(&nsvg, 0, sizeof(nsvg));
 
@@ -130,9 +115,6 @@ void Path::set(const NSVGshape *shape) {
 	nsvg.strokeLineCap = shape->strokeLineCap;
 	nsvg.miterLimit = shape->miterLimit;
 	nsvg.fillRule = shape->fillRule;
-	for (int i = 0; i < NSVG_PAINTORDER_COUNT; i++) {
-		nsvg.paintOrder[i] = shape->paintOrder[i];
-	}
 	nsvg.flags = shape->flags;
 	for (int i = 0; i < 4; i++) {
 		nsvg.bounds[i] = shape->bounds[i];
@@ -161,7 +143,8 @@ void Path::set(const NSVGshape *shape) {
 }
 
 Path::Path() :
-	changes(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS) {
+	changes(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS),
+	pathIndex(-1) {
 
 	memset(&nsvg, 0, sizeof(nsvg));
 
@@ -175,9 +158,6 @@ Path::Path() :
 	nsvg.strokeLineCap = NSVG_CAP_BUTT;
 	nsvg.miterLimit = 4;
 	nsvg.fillRule = NSVG_FILLRULE_NONZERO;
-	for (int i = 0; i < NSVG_PAINTORDER_COUNT; i++) {
-		nsvg.paintOrder[i] = (NSVGpaintOrder)i;
-	}
 	nsvg.flags = NSVG_FLAGS_VISIBLE;
 	for (int i = 0; i < 4; i++) {
 		nsvg.bounds[i] = 0.0f;
@@ -188,13 +168,14 @@ Path::Path() :
 }
 
 Path::Path(const NSVGshape *shape) :
-	changes(0) {
+	changes(0),
+	pathIndex(-1) {
 
 	set(shape);
 	newSubpath = true;
 }
 
-Path::Path(const char *d) : changes(0) {
+Path::Path(const char *d) : changes(0), pathIndex(-1) {
 	NSVGimage *image = nsvg::parsePath(d);
 	set(image->shapes);
 	nsvgDelete(image);
@@ -203,7 +184,8 @@ Path::Path(const char *d) : changes(0) {
 }
 
 Path::Path(const Path *path) :
-	changes(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS) {
+	changes(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS),
+	pathIndex(-1) {
 
 	memset(&nsvg, 0, sizeof(nsvg));
 
@@ -224,9 +206,6 @@ Path::Path(const Path *path) :
 	nsvg.strokeLineCap = path->nsvg.strokeLineCap;
 	nsvg.miterLimit = path->nsvg.miterLimit;
 	nsvg.fillRule = path->nsvg.fillRule;
-	for (int i = 0; i < NSVG_PAINTORDER_COUNT; i++) {
-		nsvg.paintOrder[i] = path->nsvg.paintOrder[i];
-	}
 	nsvg.flags = path->nsvg.flags;
 	for (int i = 0; i < 4; i++) {
 		nsvg.bounds[i] = path->nsvg.bounds[i];
@@ -367,27 +346,6 @@ const float *Path::getExactBounds() {
 void Path::addSubpath(const SubpathRef &t) {
 	closeSubpath();
 	_append(t);
-}
-
-void Path::removeSubpath(const SubpathRef &t) {
-	const auto it = std::find(
-		subpaths.begin(), subpaths.end(), t);
-	if (it == subpaths.end()) {
-		return; // Subpath not in Path.
-	}
-
-	if (it == subpaths.begin()) {
-		nsvg.paths = t->nsvg.next;
-	} else {
-		const SubpathRef prev = *(it - 1);
-		prev->nsvg.next = t->nsvg.next;
-	}
-
-	subpaths.erase(it);
-
-	t->removeObserver(this);
-
-	changed(CHANGED_GEOMETRY);
 }
 
 void Path::setName(const char *name) {
@@ -559,19 +517,6 @@ void Path::setLineJoin(ToveLineJoin join) {
 	}
 }
 
-ToveLineCap Path::getLineCap() const {
-	return nsvg::toveLineCap(
-		static_cast<NSVGlineCap>(nsvg.strokeLineCap));
-}
-
-void Path::setLineCap(ToveLineCap cap) {
-	NSVGlineCap nsvgCap = nsvg::nsvgLineCap(cap);
-	if (nsvgCap != nsvg.strokeLineCap) {
-		nsvg.strokeLineCap = nsvgCap;
-		geometryChanged();
-	}
-}
-
 void Path::setMiterLimit(float limit) {
 	if (limit != nsvg.miterLimit) {
 		if ((nsvg.miterLimit != 0.0f) != (limit != 0.0f)) {
@@ -608,7 +553,7 @@ void Path::setFillRule(ToveFillRule rule) {
 	}
 }
 
-void Path::animateLineDash(const PathRef &a, const PathRef &b, float t, int pathIndex) {
+void Path::animateLineDash(const PathRef &a, const PathRef &b, float t) {
 	const float s = 1.0f - t;
 
 	setLineDashOffset(a->getLineDashOffset() * s + b->getLineDashOffset() * t);
@@ -648,7 +593,7 @@ void Path::animateLineDash(const PathRef &a, const PathRef &b, float t, int path
 	}	
 }
 
-void Path::animate(const PathRef &a, const PathRef &b, float t, int pathIndex) {
+void Path::animate(const PathRef &a, const PathRef &b, float t) {
 	const int n = a->subpaths.size();
 	if (n != b->subpaths.size()) {
 		if (tove::report::warnings()) {
@@ -708,16 +653,10 @@ void Path::animate(const PathRef &a, const PathRef &b, float t, int pathIndex) {
 	const float s = 1.0f - t;
 
 	setLineWidth(a->getLineWidth() * s + b->getLineWidth() * t);
-	setLineJoin(t < 0.5f ? a->getLineJoin() : b->getLineJoin());
-	setLineCap(t < 0.5f ? a->getLineCap() : b->getLineCap());
 	setMiterLimit(a->getMiterLimit() * s + b->getMiterLimit() * t);
-	animateLineDash(a, b, t, pathIndex);
+	animateLineDash(a, b, t);
 
 	setOpacity(a->getOpacity() * s + b->getOpacity() * t);
-
-	for (int i = 0; i < NSVG_PAINTORDER_COUNT; i++) {
-		nsvg.paintOrder[i] = t < 0.5f ? a->nsvg.paintOrder[i] : b->nsvg.paintOrder[i];
-	}
 }
 
 PathRef Path::clone() const {
@@ -777,54 +716,6 @@ void Path::intersect(float x1, float y1, float x2, float y2) const {
 		t->intersect(ray, intersecter);
 	}
 	// return intersecter.get()
-}
-
-void Path::refine(int factor) {
-	for (const auto &subpath : subpaths) {
-		subpath->refine(factor);
-	}
-}
-
-void Path::rotate(ToveElementType what, int k) {
-	switch (what) {
-		case TOVE_SUBPATH: {
-			std::rotate(
-				subpaths.begin(),
-				subpaths.begin() + umod(k, subpaths.size()),
-				subpaths.end());
-		} break;
-		default: {
-			for (const auto &subpath : subpaths) {
-				subpath->rotate(what, k);
-			}	
-		} break;
-	}
-}
-
-bool Path::morphify(const std::vector<PathRef> &paths) {
-	if (paths.size() < 2) {
-		return false;
-	}
-
-	const int n = paths[0]->getNumSubpaths();
-	for (int i = 1; i < paths.size(); i++) {
-		if (paths[i]->getNumSubpaths() != n) {
-			return false;
-		}
-	}
-
-	std::vector<SubpathRef> subpaths;
-	subpaths.reserve(paths.size());
-
-	for (int j = 0; j < n; j++) {
-		subpaths.clear();
-		for (int i = 0; i < paths.size(); i++) {
-			subpaths.push_back(paths[i]->getSubpath(j));
-		}
-		Subpath::morphify(subpaths);
-	}
-
-	return true;
 }
 
 void Path::updateNSVG() {

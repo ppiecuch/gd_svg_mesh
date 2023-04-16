@@ -31,8 +31,8 @@ private:
 	PaintRef lineColor;
 	std::string name;
 
-	int16_t pathIndex;
 	uint8_t changes;
+	int16_t pathIndex;
 	float exactBounds[4];
 
 	inline const SubpathRef &current() const {
@@ -47,7 +47,7 @@ private:
 
 	void set(const NSVGshape *shape);
 
-	void animateLineDash(const PathRef &a, const PathRef &b, float t, int pathIndex);
+	void animateLineDash(const PathRef &a, const PathRef &b, float t);
 
 public:
 	NSVGshape nsvg;
@@ -75,7 +75,6 @@ public:
 	const float *getExactBounds();
 
 	void addSubpath(const SubpathRef &t);
-	void removeSubpath(const SubpathRef &t);
 
 	void setName(const char *name);
 	inline const char *getName() const {
@@ -91,7 +90,6 @@ public:
 	}
 
 	bool areColorsSolid() const;
-	PathPaintInd createPaintIndices(PaintIndex &it) const;
 
 	void setLineDash(const float *dashes, const int count);
 	inline float getLineDashOffset() const {
@@ -138,9 +136,6 @@ public:
 	ToveLineJoin getLineJoin() const;
 	void setLineJoin(ToveLineJoin join);
 
-	ToveLineCap getLineCap() const;
-	void setLineCap(ToveLineCap cap);
-
 	inline float getMiterLimit() const {
 		return nsvg.miterLimit;
 	}
@@ -149,10 +144,7 @@ public:
 	ToveFillRule getFillRule() const;
 	void setFillRule(ToveFillRule rule);
 
-	void animate(const PathRef &a, const PathRef &b, float t, int pathIndex);
-	void refine(int factor);
-	void rotate(ToveElementType what, int k);
-	static bool morphify(const std::vector<PathRef> &paths);
+	void animate(const PathRef &a, const PathRef &b, float t);
 
 	PathRef clone() const;
 
@@ -205,16 +197,6 @@ public:
 
 	inline void setIndex(int index) {
 		pathIndex = index;
-	}
-
-	inline bool hasNormalFillStrokeOrder() const {
-		int order[NSVG_PAINTORDER_COUNT];
-		for (int i = 0; i < NSVG_PAINTORDER_COUNT; i++) {
-			int p = (int)nsvg.paintOrder[i];
-			assert(p >= 0 && p < NSVG_PAINTORDER_COUNT);
-			order[p] = i;
-		}
-		return order[NSVG_PAINTORDER_FILL] < order[NSVG_PAINTORDER_STROKE];
 	}
 
 #ifdef NSVG_CLIP_PATHS

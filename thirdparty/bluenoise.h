@@ -1,28 +1,28 @@
-/*!
-	the following BlueNoise class is adapted for TÖVE from
-	https://bitbucket.org/wkjarosz/hdrview/src
-	
-	original comments:
+// the following BlueNoise class is adapted for TÖVE from
+// https://bitbucket.org/wkjarosz/hdrview/src
+//
+// original comments:
+//   force-random-dither.cpp -- Generate a dither matrix using the force-random-dither method from:
+//
+// W. Purgathofer, R. F. Tobler and M. Geiler.
+// "Forced random dithering: improved threshold matrices for ordered dithering"
+// Image Processing, 1994. Proceedings. ICIP-94., IEEE International Conference,
+// Austin, TX, 1994, pp. 1032-1035 vol.2.
+// doi: 10.1109/ICIP.1994.413512
+//
+// author: Wojciech Jarosz
+//
+// All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.txt file.
 
-    force-random-dither.cpp -- Generate a dither matrix using the force-random-dither method from:
-
-	W. Purgathofer, R. F. Tobler and M. Geiler.
-	"Forced random dithering: improved threshold matrices for ordered dithering"
-	Image Processing, 1994. Proceedings. ICIP-94., IEEE International Conference,
-	Austin, TX, 1994, pp. 1032-1035 vol.2.
-	doi: 10.1109/ICIP.1994.413512
-
-    \author Wojciech Jarosz
-
-    All rights reserved. Use of this source code is governed by a
-    BSD-style license that can be found in the LICENSE.txt file.
-*/
 
 #ifdef __linux__
 // fixes a nasty compilation problem under Ubuntu.
-#undef __SSE3__
+# undef __SSE3__
 #endif
 
+#include <cstdint>
+#include <vector>
 #include <random>
 #include <algorithm>
 
@@ -79,8 +79,8 @@ public:
 	}
 
 	BlueNoise(const int Sm = 128) : Sm(Sm) {
-        std::random_device rng;
-        std::mt19937 urng(rng());
+		std::random_device rng;
+		std::mt19937 urng(rng());
 
 		const int Smk = Sm * Sm;
 		matrix = new Matrix(Sm);
@@ -107,8 +107,7 @@ public:
 			// int halfP = freeLocations.size();
 			int halfP = std::min(std::max(1, (int)sqrt(freeLocations.size()*3/4)), (int)freeLocations.size());
 			// int halfP = min(10, (int)freeLocations.size());
-			for (int i = 0; i < halfP; ++i)
-			{
+			for (int i = 0; i < halfP; ++i) {
 				const Vector2i & location = freeLocations[i];
 				if (forceField(location.x, location.y) < minimum) {
 					minimum = forceField(location.x, location.y);
@@ -128,17 +127,17 @@ public:
 			M(minimumLocation.x, minimumLocation.y) = ditherValue;
 		}
 
-        float mm = 0.0f;
+		float mm = 0.0f;
 		for (int y = 0; y < Sm; ++y) {
 			for (int x = 0; x < Sm; ++x) {
-                mm = std::max(mm, M(x, y));
-            }
-        }
+				mm = std::max(mm, M(x, y));
+			}
+		}
 		for (int y = 0; y < Sm; ++y) {
 			for (int x = 0; x < Sm; ++x) {
-                M(x, y) /= mm;
-            }
-        }
+				M(x, y) /= mm;
+			}
+		}
 	}
 
 	~BlueNoise() {

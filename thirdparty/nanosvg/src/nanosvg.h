@@ -127,12 +127,6 @@ typedef struct NSVGgradient {
 	NSVGgradientStop stops[1];
 } NSVGgradient;
 
-enum NSVGpaintOrder {
-	NSVG_PAINTORDER_FILL = 0,
-	NSVG_PAINTORDER_STROKE = 1,
-	NSVG_PAINTORDER_COUNT = 2
-};
-
 typedef struct NSVGpaint {
 	char type;
 	union {
@@ -165,7 +159,6 @@ typedef struct NSVGshape
 	char strokeLineCap;			// Stroke cap type.
 	float miterLimit;			// Miter limit
 	char fillRule;				// Fill rule, see NSVGfillRule.
-	NSVGpaintOrder paintOrder[NSVG_PAINTORDER_COUNT];		// Paint order (see NSVGpaintOrder).
 	unsigned char flags;		// Logical or of NSVG_FLAGS_* flags
 	float bounds[4];			// Tight bounding box of the shape [minx,miny,maxx,maxy].
 	NSVGpath* paths;			// Linked list of paths in the image.
@@ -178,7 +171,7 @@ typedef struct NSVGimage
 	float width;				// Width of the image.
 	float height;				// Height of the image.
 	NSVGshape* shapes;			// Linked list of shapes in the image.
-	TOVEimageClip clip;			// Clip path information.
+	TOVEclipPath* clipPaths;	// Linked list of clip paths in the image.
 } NSVGimage;
 
 typedef int (*NSVGparseXML)(char* input,
@@ -314,7 +307,7 @@ static void nsvg__parseElement(char* s,
 
 	// Get attribs
 	while (!end && *s && nattr < NSVG_XML_MAX_ATTRIBS-3) {
-		char* name = NULL;
+		name = NULL;
 		char* value = NULL;
 
 		// Skip white space before the attrib name
@@ -468,7 +461,6 @@ typedef struct NSVGattrib
 	char hasStroke;
 	char visible;
 	TOVEclipPathIndex clipPathCount;
-	NSVGpaintOrder paintOrder[NSVG_PAINTORDER_COUNT];
 } NSVGattrib;
 
 typedef struct NSVGparser
@@ -487,7 +479,7 @@ typedef struct NSVGparser
 	float dpi;
 	char pathFlag;
 	char defsFlag;
-	TOVEclipPathDefinition* clipPath;
+	TOVEclipPath* clipPath;
 	TOVEclipPathIndex clipPathStack[TOVE_MAX_CLIP_PATHS];
 } NSVGparser;
 
@@ -675,10 +667,6 @@ static NSVGparser* nsvg__createParser()
 	p->attr[0].fillRule = NSVG_FILLRULE_NONZERO;
 	p->attr[0].hasFill = 1;
 	p->attr[0].visible = 1;
-
-	for (int i = 0; i < NSVG_PAINTORDER_COUNT; i++) {
-		p->attr[0].paintOrder[i] = (NSVGpaintOrder)i;
-	}
 
 	return p;
 
@@ -1013,10 +1001,6 @@ static void nsvg__addShape(NSVGparser* p)
 	shape->miterLimit = attr->miterLimit;
 	shape->fillRule = attr->fillRule;
 	shape->opacity = attr->opacity;
-
-	for (i = 0; i < NSVG_PAINTORDER_COUNT; i++) {
-		shape->paintOrder[i] = attr->paintOrder[i];
-	}
 
 	shape->paths = p->plist;
 	p->plist = NULL;
@@ -1785,52 +1769,6 @@ static int nsvg__parseStrokeDashArray(NSVGparser* p, const char* str, float* str
 	return count;
 }
 
-static void nsvg__parsePaintOrder(NSVGpaintOrder* order, const char* str)
-{
-	int k = 0;
-	int seen = 0;
-	int p;
-	int len;
-	const char* tag;
-
-	while (*str && k < NSVG_PAINTORDER_COUNT) {
-		while (*str && nsvg__isspace(*str)) {
-			str++;
-		}
-
-		tag = str;
-		while (*str && !nsvg__isspace(*str)) {
-			str++;
-		}
-		len = str - tag;
-		if (len < 1) {
-			break;
-		}
-
-		if (len == 6 && strncmp(tag, "normal", 6) == 0) {
-			break;
-		} else if (len == 4 && strncmp(tag, "fill", 4) == 0) {
-			p = (int)NSVG_PAINTORDER_FILL;
-		} else if (len == 6 && strncmp(tag, "stroke", 6) == 0) {
-			p = (int)NSVG_PAINTORDER_STROKE;
-		} else {
-			continue; // ignore unknown tags
-		}
-
-		if (((seen >> p) & 1) == 0) {
-			order[k++] = (NSVGpaintOrder)p;
-			seen |= 1 << p;
-		}
-	}
-
-	for (p = 0; k < NSVG_PAINTORDER_COUNT && p < NSVG_PAINTORDER_COUNT; p++) {
-		if (((seen >> p) & 1) == 0) {
-			order[k++] = (NSVGpaintOrder)p;
-			seen |= 1 << p;
-		}
-	}
-}
-
 static void nsvg__parseStyle(NSVGparser* p, const char* str);
 
 static int nsvg__parseAttr(NSVGparser* p, const char* name, const char* value)
@@ -1895,8 +1833,8 @@ static int nsvg__parseAttr(NSVGparser* p, const char* name, const char* value)
 		if (strncmp(value, "url(", 4) == 0 && attr->clipPathCount < TOVE_MAX_CLIP_PATHS) {
 			char clipName[64];
 			nsvg__parseUrl(clipName, value);
-			int clipPath = tove__findClipPath(p, clipName, attr->xform);
-			p->clipPathStack[attr->clipPathCount++] = clipPath;
+			TOVEclipPath *clipPath = tove__findClipPath(p, clipName);
+			p->clipPathStack[attr->clipPathCount++] = clipPath->index;
 		}
 	} else if (strcmp(name, "stop-color") == 0) {
 		attr->stopColor = nsvg__parseColor(value);
@@ -1907,8 +1845,6 @@ static int nsvg__parseAttr(NSVGparser* p, const char* name, const char* value)
 	} else if (strcmp(name, "id") == 0) {
 		strncpy(attr->id, value, 63);
 		attr->id[63] = '\0';
-	} else if (strcmp(name, "paint-order") == 0) {
-		nsvg__parsePaintOrder(attr->paintOrder, value);
 	} else {
 		return 0;
 	}
@@ -2854,7 +2790,7 @@ static void nsvg__startElement(void* ud, const char* el, const char** attr)
 		nsvg__pushAttr(p);
 		for (i = 0; attr[i]; i += 2) {
 			if (strcmp(attr[i], "id") == 0) {
-				p->clipPath = tove__addClipPathDefinition(p, attr[i+1]);
+				p->clipPath = tove__findClipPath(p, attr[i+1]);
 				break;
 			}
 		}
@@ -3017,7 +2953,7 @@ static void nsvg__scaleToViewbox(NSVGparser* p, const char* units)
 	sy *= us;
 	nsvg__transformShapes(p->image->shapes, tx, ty, sx, sy);
 
-	clipPath = p->image->clip.instances;
+	clipPath = p->image->clipPaths;
 	while (clipPath != NULL) {
 		nsvg__transformShapes(clipPath->shapes, tx, ty, sx, sy);
 		clipPath = clipPath->next;
@@ -3028,7 +2964,8 @@ static void nsvg__transformShapes(NSVGshape* shapes, float tx, float ty, float s
 {
 	NSVGshape* shape;
 	NSVGpath* path;
-	float avgs, t[6];
+	float avgs;
+	float t[6];
 	int i;
 	float* pt;
 
@@ -3063,8 +3000,9 @@ static void nsvg__transformShapes(NSVGshape* shapes, float tx, float ty, float s
 
 		shape->strokeWidth *= avgs;
 		shape->strokeDashOffset *= avgs;
-		for (i = 0; i < shape->strokeDashCount; i++)
+		for (i = 0; i < shape->strokeDashCount; i++) {
 			shape->strokeDashArray[i] *= avgs;
+		}
 	}
 }
 
@@ -3179,10 +3117,10 @@ void nsvgDelete(NSVGimage* image)
 {
 	if (image == NULL) return;
 	nsvg__deleteShapes(image->shapes);
-	tove__deleteClipPaths(&image->clip);
+	tove__deleteClipPaths(image->clipPaths);
 	free(image);
 }
 
 #include "../tove/svg.cpp"
 
-#endif // NANOSVG_IMPLEMENTATION
+#endif

@@ -234,7 +234,7 @@ public:
 	}
 
 	static inline bool enabled(const NSVGrasterizer* r) {
-		return r->quality.dither.type == TOVE_NSVG_DITHER_DIFFUSION;
+		return r->quality > 0;
 	}
 
 	static inline bool allocate(NSVGrasterizer* r, int w) {
@@ -316,7 +316,7 @@ public:
 		const float errors[] = {f_cr - cr, f_cg - cg, f_cb - cb, f_ca - ca};
 
 		// Distribute errors using sierra dithering.
-		#pragma clang loop vectorize(enable)
+		// #pragma clang loop vectorize(enable)
 		for (int j = 0; j < 4; j++) {
 			const int offset = x * dither_components + j;
 			const float error = errors[j];
@@ -436,12 +436,12 @@ TOVEscanlineFunction tove__initPaint(
 
 bool tove__rasterize(
 	NSVGrasterizer* r,
-	NSVGimage* image,
-	int w,
-	int h,
+    NSVGimage* image,
+    int w,
+    int h,
 	float tx,
-	float ty,
-	float scale)
+    float ty,
+    float scale)
 {
 	if (!BestGradientColors::allocate(r, w)) {
 		return false;
@@ -450,7 +450,7 @@ bool tove__rasterize(
 	TOVEclipPath* clipPath;
 	int clipPathCount = 0;
 
-	clipPath = image->clip.instances;
+	clipPath = image->clipPaths;
 	if (clipPath == NULL) {
 		return true;
 	}
@@ -469,7 +469,7 @@ bool tove__rasterize(
 	}
 	memset(r->stencil.data, 0, r->stencil.size * clipPathCount);
 
-	clipPath = image->clip.instances;
+	clipPath = image->clipPaths;
 	while (clipPath != NULL) {
 		nsvg__rasterizeShapes(r, clipPath->shapes, tx, ty, scale,
 			&r->stencil.data[r->stencil.size * clipPath->index],

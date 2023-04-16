@@ -10,8 +10,6 @@
  */
 
 #include "triangles.h"
-#include <sstream>
-#include <chrono>
 
 BEGIN_TOVE_NAMESPACE
 
@@ -34,40 +32,16 @@ ToveVertexIndex *TriangleStore::allocate(int n, bool isFinalSize) {
 }
 
 void TriangleStore::_add(
-    const std::list<TPPLPoly> &triangles,
+    const std::list<ToveTPPLPoly> &triangles,
     bool isFinalSize) {
 
-    assert(mMode == TRIANGLES_LIST);
-
-    ToveVertexIndex *indices = allocate(
-        triangles.size(), isFinalSize);
-
-    int numBadTriangles = 0;
-
-    for (const auto &t : triangles) {
-        bool good = true;
-        for (int i = 0; i < 3; i++) {
-            const int index = t[i].id;
-            if (index < 0) {
-                good = false;
-                break;
-            }
-            indices[i] = ToLoveVertexMapIndex(index);
-        }
-        if (good) {
-            indices += 3;
-        } else {
-            numBadTriangles += 1;
+    ToveVertexIndex *indices = allocate(triangles.size(), isFinalSize);
+    for (auto i = triangles.begin(); i != triangles.end(); i++) {
+        const ToveTPPLPoly &poly = *i;
+        for (int j = 0; j < 3; j++) {
+            *indices++ = ToLoveVertexMapIndex(poly[j].id);
         }
     }
-
-    if (numBadTriangles > 0 && tove::report::config.level <= TOVE_REPORT_DEBUG) {
-        std::ostringstream s;
-        s << "skipped " << numBadTriangles << " bad triangles";
-        tove::report::report(s.str().c_str(), TOVE_REPORT_DEBUG);            
-    }
-
-    mSize -= numBadTriangles * 3;
 }
 
 void TriangleStore::_add(
@@ -86,97 +60,78 @@ void TriangleStore::_add(
 
 
 TriangleCache::~TriangleCache() {
-    for (Triangulation *t : triangulations) {
-        delete t;
+    for (int i = 0; i < triangulations.size(); i++) {
+        delete triangulations[i];
     }
-}
-
-void TriangleCache::addAndMakeCurrent(Triangulation *t) {
-    if (t->partition.empty()) {
-        return;
-    }
-
-    if (triangulations.size() + 1 > cacheSize) {
-        evict();
-    }
-
-    t->useCount = 0;
-    triangulations.push_front(t);
 }
 
 void TriangleCache::evict() {
     uint64_t minCount = std::numeric_limits<uint64_t>::max();
-    std::list<Triangulation*>::iterator candidate = triangulations.end();
+    int minIndex = -1;
 
-    for (auto i = triangulations.begin(); i != triangulations.end(); i++) {
-        const Triangulation *t = *i;
+    for (int i = 0; i < triangulations.size(); i++) {
+        const Triangulation *t = triangulations[i];
         if (!t->keyframe) {
             const uint64_t count = t->useCount;
             if (count < minCount) {
                 minCount = count;
-                candidate = i;
+                minIndex = i;
             }
         }
     }
 
-    if (candidate != triangulations.end()) {
-        delete *candidate;
-        triangulations.erase(candidate);
+    if (minIndex >= 0) {
+        delete triangulations[minIndex];
+        triangulations.erase(triangulations.begin() + minIndex);
+        current = std::min(current, (int)(triangulations.size() - 1));
     }
 }
 
 bool TriangleCache::findCachedTriangulation(
-    const Vertices &vertices,
-    bool &trianglesChanged) {
+    const Vertices &vertices, bool &trianglesChanged) {
     
     const int n = triangulations.size();
     if (n == 0) {
         return false;
     }
 
-    const bool debug = tove::report::config.level <= TOVE_REPORT_DEBUG;
-
-    std::chrono::high_resolution_clock::time_point t0;
-    if (debug) {
-        t0 = std::chrono::high_resolution_clock::now();
+    assert(current < n);
+    if (triangulations[current]->partition.check(vertices)) {
+        triangulations[current]->useCount++;
+        trianglesChanged = false;
+        return true;
     }
 
-    bool good = false;
-    int switchedTo = 0;
-
-    for (auto i = triangulations.begin(); i != triangulations.end(); i++) {
-        Triangulation *t = *i;
-        if (t->check(vertices)) {
-            trianglesChanged = switchedTo > 0;
-            good = true;
-            t->useCount++;
-            if (trianglesChanged) {
-                makeCurrent(i);
+    const int k = std::max(current, n - current);
+    for (int i = 1; i <= k; i++) {
+        if (current + i < n) {
+            const int forward = (current + i) % n;
+            if (triangulations[forward]->partition.check(vertices)) {
+                std::swap(
+                    triangulations[(current + 1) % n],
+                    triangulations[forward]);
+                current = (current + 1) % n;
+                triangulations[current]->useCount++;
+                trianglesChanged = true;
+                return true;
             }
-            break;
         }
-        switchedTo += 1;
-    }
 
-    if (debug) {
-        std::ostringstream s;
-        if (good) {
-            const int duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::high_resolution_clock::now() - t0).count();
-            if (switchedTo == 0) {
-                s << "[" << *name << "]" << " verified triangulation in " <<
-                    duration / 1000.0f << " μs";
-            } else {
-                s << "[" << *name << "]" << " switched to cached triangulation [" << switchedTo << "] in " <<
-                    duration / 1000.0f << " μs";
+        if (current - i >= 0) {
+            const int backward = (current + n - i) % n;
+            if (triangulations[backward]->partition.check(vertices)) {
+                std::swap(
+                    triangulations[(current + n - 1) % n],
+                    triangulations[backward]);
+                current = (current + n - 1) % n;
+                triangulations[current]->useCount++;
+                trianglesChanged = true;
+                return true;
             }
-        } else {
-            s << "[" << *name << "] no cached triangulation";
         }
-        tove::report::report(s.str().c_str(), TOVE_REPORT_DEBUG);            
     }
 
-    return good;
+    return false;
 }
 
 END_TOVE_NAMESPACE

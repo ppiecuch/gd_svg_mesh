@@ -13,9 +13,48 @@
 #define __TOVE_MESH_UTILS 1
 
 #include "../common.h"
-#include "../utils.h"
+#include <cmath>
 
 BEGIN_TOVE_NAMESPACE
+
+
+struct vec2 {
+	float x = 0;
+	float y = 0;
+
+	inline vec2() {
+	}
+
+	inline vec2(float x, float y) : x(x), y(y) {
+	}
+
+	inline float magnitude() const {
+		return std::sqrt(x * x + y * y);
+	}
+
+	inline vec2 normalized() const {
+		const float m = magnitude();
+		return vec2(x / m, y / m);
+	}
+
+	inline float dot(const vec2 &v) const {
+		return x * v.x + y * v.y;
+	}
+
+	inline float angle(const vec2 &v) const {
+		return std::atan2(x * v.y - y * v.x, x * v.x + y * v.y);
+	}
+
+	inline vec2 rotated(float angle) const {
+		const float c = std::cos(angle);
+		const float s = std::sin(angle);
+		return vec2(c * x - s * y, s * x + c * y);
+	}
+
+	inline vec2 operator*(float s) const {
+		return vec2(x * s, y * s);
+	}
+};
 
 class Vertices {
 private:
@@ -84,16 +123,14 @@ inline bool unequal(
 	return dx * dx + dy * dy > 1e-5;
 }
 
-template<typename V>
 inline int find_unequal_backward(
-	const V &vertices, int start, int n) {
+	const Vertices &vertices, int start, int n) {
 	start = start % n;
-	const auto p0 = vertices[start];
-	const float x = p0.x;
-	const float y = p0.y;
+	const float x = vertices[start].x;
+	const float y = vertices[start].y;
 	for (int i = 1; i < n; i++) {
 		const int j = (start + n - i) % n;
-		const auto p = vertices[j];
+		const auto &p = vertices[j];
 		if (unequal(x, y, p.x, p.y)) {
 			return j;
 		}
@@ -101,16 +138,46 @@ inline int find_unequal_backward(
 	return (start + n - 1) % n;
 }
 
-template<typename V>
 inline int find_unequal_forward(
-	const V &vertices, int start, int n) {
+	const Vertices &vertices, int start, int n) {
 	start = start % n;
-	const auto p0 = vertices[start];
-	const float x = p0.x;
-	const float y = p0.y;
+	const float x = vertices[start].x;
+	const float y = vertices[start].y;
 	for (int i = 1; i < n; i++) {
 		const int j = (start + i) % n;
-		const auto p = vertices[j];
+		const auto &p = vertices[j];
+		if (unequal(x, y, p.x, p.y)) {
+			return j;
+		}
+	}
+	return (start + 1) % n;
+}
+
+inline int find_unequal_forward(
+	const Vertices &vertices, const ToveTPPLPoly &poly, int start, int n) {
+	start = start % n;
+	const auto &s = vertices[poly[start].id];
+	const float x = s.x;
+	const float y = s.y;
+	for (int i = 1; i < n; i++) {
+		const int j = (start + i) % n;
+		const auto &p = vertices[poly[j].id];
+		if (unequal(x, y, p.x, p.y)) {
+			return j;
+		}
+	}
+	return (start + 1) % n;
+}
+
+inline int find_unequal_forward(
+	const Vertices &vertices, const uint16_t *indices, int start, int n) {
+	start = start % n;
+	const auto &s = vertices[indices[start]];
+	const float x = s.x;
+	const float y = s.y;
+	for (int i = 1; i < n; i++) {
+		const int j = (start + i) % n;
+		const auto &p = vertices[indices[j]];
 		if (unequal(x, y, p.x, p.y)) {
 			return j;
 		}
@@ -159,28 +226,28 @@ inline float ray_circle(
 
 	const float c = fx * fx + fy * fy - r * r;
 
-	if (c > 0.0f) {
-		return 0.0f;
+	if (c > 0) {
+		return 0;
 	}
 
 	const float a = rx * rx + ry * ry;
 	const float b = 2 * (fx * rx + fy * ry);
 
 	const float D = b * b - 4 * a * c;
-	if (D > 0.0f) {
+	if (D > 0) {
 		D = std::sqrt(D);
 
 		float t1 = (-b - D) / (2 * a);
 		float t2 = (-b + D) / (2 * a);
 
-		if (t1 > 0.0f) {
+		if (t1 > 0) {
 			return t1;
-		} else if (t2 > 0.0f) {
+		} else if (t2 > 0) {
 			return t2;
 		}
 	}
 
-	return 0.0f;
+	return 0;
 }
 #endif
 

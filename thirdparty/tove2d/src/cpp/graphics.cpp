@@ -1,44 +1,31 @@
 /*
- * TÖVE - Animated vector graphics for LÖVE.
- * https://github.com/poke1024/tove2d
- *
- * Copyright (c) 2018, Bernhard Liebl
- *
- * Distributed under the MIT license. See LICENSE file for details.
- *
- * All rights reserved.
- */
+* TÖVE - Animated vector graphics for LÖVE.
+* https://github.com/poke1024/tove2d
+*
+* Copyright (c) 2018, Bernhard Liebl
+*
+* Distributed under the MIT license. See LICENSE file for details.
+*
+* All rights reserved.
+*/
 
- // on the naming of things:
-
- // what NSVG calls a "shape" is called a "path" in TÖVE; what NSVG calls a
- // "path" is a "sub path" in TÖVE. see this explanation by Mark Kilgard:
- // (https://www.opengl.org/discussion_boards/showthread.php/175260-GPU-accelerated-path-rendering?p=1225200&viewfull=1#post1225200)
-
- // which leads us to this renaming:
- // 		NSVG path -> Subpath
- // 		NSVG shape -> Path
- // 		NSVG image -> Graphics
+// on the naming of things:
+//
+// what NSVG calls a "shape" is called a "path" in TÖVE; what NSVG calls a
+// "path" is a "sub path" in TÖVE. see this explanation by Mark Kilgard:
+// (https://www.opengl.org/discussion_boards/showthread.php/175260-GPU-accelerated-path-rendering?p=1225200&viewfull=1#post1225200)
+//
+// which leads us to this renaming:
+//   NSVG path -> Subpath
+//   NSVG shape -> Path
+//   NSVG image -> Graphics
 
 #include "graphics.h"
 #include "mesh/meshifier.h"
 #include "nsvg.h"
 #include <sstream>
-#include <algorithm>
 
 BEGIN_TOVE_NAMESPACE
-
-PaintIndices::PaintIndices(Graphics *graphics) {
-	const int n = graphics->getNumPaths();
-	paints.reserve(n);
-
-	PaintIndex it;
-	for (int i = 0; i < n; i++) {
-		paints.push_back(graphics->getPath(i)->createPaintIndices(it));
-	}
-
-	size = it;
-}
 
 GraphicsRef Graphics::createFromSVG(
 	const char *svg, const char *units, float dpi) {
@@ -61,22 +48,23 @@ void Graphics::rasterize(
 	float tx, float ty, float scale,
 	const ToveRasterizeSettings *settings) {
 
-	nsvg::rasterize(getImage(), tx, ty, scale,
-		pixels, width, height, stride, settings);
+	nsvg::rasterize(getImage(), tx, ty, scale, pixels, width, height, stride, settings);
 }
 
 static void copyFromNSVG(
-    Observer *observer,
-    NSVGshape **anchor,
-    std::vector<PathRef> &paths,
-    const NSVGshape *shapes) {
+	Observer *observer,
+	NSVGshape **anchor,
+	std::vector<PathRef> &paths,
+	const NSVGshape *shapes) {
 
-    const NSVGshape *shape = shapes;
+	const NSVGshape *shape = shapes;
+	int index = 0;
 	while (shape) {
 		PathRef path = tove_make_shared<Path>(shape);
 		if (observer) {
 			path->addObserver(observer);
 		}
+		path->setIndex(index++);
 		if (paths.empty()) {
 			*anchor = &path->nsvg;
 		} else {
@@ -93,12 +81,13 @@ static void copyPaths(
 	std::vector<PathRef> &paths,
 	const std::vector<PathRef> &sourcePaths) {
 
-	const int n = sourcePaths.size();
-	for (int i = 0; i < n; i++) {
-		PathRef path = tove_make_shared<Path>(sourcePaths[i].get());
+	int index = 0;
+	while (index < sourcePaths.size()) {
+		PathRef path = tove_make_shared<Path>(sourcePaths[index].get());
 		if (observer) {
 			path->addObserver(observer);
 		}
+		path->setIndex(index++);
 		if (paths.empty()) {
 			*anchor = &path->nsvg;
 		} else {
@@ -110,9 +99,9 @@ static void copyPaths(
 
 #ifdef NSVG_CLIP_PATHS
 Clip::Clip(TOVEclipPath *clipPath) {
-    std::memset(&nsvg, 0, sizeof(nsvg));
-    copyFromNSVG(nullptr, &nsvg.shapes, paths, clipPath->shapes);
-    nsvg.index = clipPath->index;
+	std::memset(&nsvg, 0, sizeof(nsvg));
+	copyFromNSVG(nullptr, &nsvg.shapes, paths, clipPath->shapes);
+	nsvg.index = clipPath->index;
 }
 
 Clip::Clip(const ClipRef &source, const nsvg::Transform &transform) {
@@ -125,7 +114,7 @@ Clip::Clip(const ClipRef &source, const nsvg::Transform &transform) {
 }
 
 void Clip::compute(const AbstractTesselator &tess) {
-    computed = tess.toClipPath(paths);
+	computed = tess.toClipPath(paths);
 }
 
 
@@ -136,13 +125,6 @@ void ClipSet::link() {
 	if (clips.size() > 0) {
 		clips[clips.size() - 1]->setNext(nullptr);
 	}
-}
-
-ClipSet::ClipSet(const std::vector<ClipRef> &c) : clips(c) {
-	for (int i = 0; i < c.size(); i++) {
-		assert(c[i]->nsvg.index == i);
-	}
-	link();
 }
 
 ClipSet::ClipSet(const ClipSet &source, const nsvg::Transform &transform) {
@@ -156,8 +138,8 @@ ClipSet::ClipSet(const ClipSet &source, const nsvg::Transform &transform) {
 #endif
 
 void Graphics::setNumPaths(int n) {
- 	// close all
- 	newPath = true;
+	// close all
+	newPath = true;
 
 	if (paths.size() != n) {
 		clear();
@@ -174,6 +156,7 @@ void Graphics::_appendPath(const PathRef &path) {
 		current()->setNext(path);
 	}
 
+	path->setIndex(paths.size());
 	path->clearNext();
 	paths.push_back(path);
 
@@ -193,7 +176,7 @@ PathRef Graphics::beginPath() {
 	path->beginSubpath();
 	newPath = false;
 
-    return path;
+	return path;
 }
 
 void Graphics::closePath(bool closeCurves) {
@@ -241,10 +224,9 @@ void Graphics::initialize(float width, float height) {
 
 	for (int i = 0; i < 4; i++) {
 		bounds[i] = 0.0;
-        exactBounds[i] = 0.0;
+		exactBounds[i] = 0.0;
 	}
-
-    changes |= CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS | CHANGED_PAINT_INDICES;
+	changes |= CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS;
 }
 
 Graphics::Graphics() : changes(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS) {
@@ -257,29 +239,24 @@ Graphics::Graphics(const ClipSetRef &clipSet) : changes(CHANGED_BOUNDS | CHANGED
 }
 
 Graphics::Graphics(const NSVGimage *image) :
-    changes(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS) {
+	changes(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS) {
 
-    initialize(image->width, image->height);
-    copyFromNSVG(this, &nsvg.shapes, paths, image->shapes);
+	initialize(image->width, image->height);
+	copyFromNSVG(this, &nsvg.shapes, paths, image->shapes);
 
 #ifdef NSVG_CLIP_PATHS
-    std::vector<ClipRef> clips;
-    TOVEclipPath *clipPath = image->clip.instances;
-    while (clipPath) {
-        clips.push_back(tove_make_shared<Clip>(clipPath));
-        clipPath = clipPath->next;
-    }
-	std::sort(clips.begin(), clips.end(), [] (const ClipRef &a, const ClipRef &b) {
-		return a->nsvg.index < b->nsvg.index;
-	});
-    clipSet = tove_make_shared<ClipSet>(clips);
-	nsvg.clip.instances = clipSet->getHead();
+	std::vector<ClipRef> clips;
+	TOVEclipPath *clipPath = image->clipPaths;
+	while (clipPath) {
+		clips.push_back(tove_make_shared<Clip>(clipPath));
+		clipPath = clipPath->next;
+	}
+	clipSet = tove_make_shared<ClipSet>(clips);
+	nsvg.clipPaths = clipSet->getHead();
 #endif
 }
 
-Graphics::Graphics(const Graphics *graphics, bool clonePaths) :
-	changes(graphics->changes) {
-	
+Graphics::Graphics(const GraphicsRef &graphics) : changes(graphics->changes) {
 	initialize(graphics->nsvg.width, graphics->nsvg.height);
 
 	strokeColor = graphics->strokeColor;
@@ -295,11 +272,7 @@ Graphics::Graphics(const Graphics *graphics, bool clonePaths) :
 	clipSet = graphics->clipSet;
 
 	for (const auto &path : graphics->paths) {
-		if (clonePaths) {
-			addPath(std::make_shared<Path>(path.get()));
-		} else {
-			addPath(path);
-		}
+		addPath(path);
 	}
 }
 
@@ -325,7 +298,7 @@ void Graphics::closeSubpath(bool closeCurves) {
 }
 
 void Graphics::invertSubpath() {
-    if (!paths.empty()) {
+	if (!paths.empty()) {
 		current()->invertSubpath();
 	}
 }
@@ -354,25 +327,13 @@ void Graphics::setLineJoin(ToveLineJoin join) {
 	strokeLineJoin = nsvg::nsvgLineJoin(join);
 }
 
-ToveLineCap Graphics::getLineCap() const {
-	return nsvg::toveLineCap(
-		static_cast<NSVGlineCap>(strokeLineCap));
-}
-
-void Graphics::setLineCap(ToveLineCap cap) {
-	strokeLineCap = nsvg::nsvgLineCap(cap);
-}
-
-bool Graphics::areColorsSolid() {
-	return getPaintIndices()->getNumGradients() == 0;
-}
-
-PaintIndicesRef Graphics::getPaintIndices() {
-	if (paintIndices.get() == nullptr || (changes & CHANGED_PAINT_INDICES)) {
-		paintIndices = tove_make_shared<PaintIndices>(this);
-		changes &= ~CHANGED_PAINT_INDICES;
+bool Graphics::areColorsSolid() const {
+	for (const auto &path : paths) {
+		if (!path->areColorsSolid()) {
+			return false;
+		}
 	}
-	return paintIndices;
+	return true;
 }
 
 void Graphics::fill() {
@@ -402,34 +363,13 @@ void Graphics::addPath(const PathRef &path) {
 	newPath = true;
 }
 
-void Graphics::removePath(const PathRef &path) {
-	const auto it = std::find(
-		paths.begin(), paths.end(), path);
-	if (it == paths.end()) {
-		return; // Path not in Graphics.
-	}
-
-	if (it == paths.begin()) {
-		nsvg.shapes = path->nsvg.next;
-	} else {
-		const PathRef prev = *(it - 1);
-		prev->nsvg.next = path->nsvg.next;
-	}
-
-	paths.erase(it);
-
-	path->removeObserver(this);
-
-	changed(CHANGED_GEOMETRY | CHANGED_COLORS);
-}
-
 PathRef Graphics::getPathByName(const char *name) const {
-    for (const PathRef &p : paths) {
-        if (strcmp(p->getName(), name) == 0) {
-            return p;
-        }
-    }
-    return PathRef();
+	for (const PathRef &p : paths) {
+		if (strcmp(p->getName(), name) == 0) {
+			return p;
+		}
+	}
+	return PathRef();
 }
 
 NSVGimage *Graphics::getImage() {
@@ -446,9 +386,9 @@ const float *Graphics::getBounds() {
 	closePath();
 
 	if (changes & CHANGED_BOUNDS) {
-        computeBounds(bounds, [] (const PathRef &path) {
-            return path->getBounds();
-        });
+		computeBounds(bounds, [] (const PathRef &path) {
+			return path->getBounds();
+		});
 		changes &= ~CHANGED_BOUNDS;
 	}
 
@@ -456,16 +396,16 @@ const float *Graphics::getBounds() {
 }
 
 const float *Graphics::getExactBounds() {
-    closePath();
+	closePath();
 
-    if (changes & CHANGED_EXACT_BOUNDS) {
-        computeBounds(exactBounds, [] (const PathRef &path) {
-            return path->getExactBounds();
-        });
-        changes &= ~CHANGED_EXACT_BOUNDS;
-    }
+	if (changes & CHANGED_EXACT_BOUNDS) {
+		computeBounds(exactBounds, [] (const PathRef &path) {
+			return path->getExactBounds();
+		});
+		changes &= ~CHANGED_EXACT_BOUNDS;
+	}
 
-    return exactBounds;
+	return exactBounds;
 }
 
 void Graphics::clean(float eps) {
@@ -475,12 +415,12 @@ void Graphics::clean(float eps) {
 }
 
 PathRef Graphics::hit(float x, float y) const {
-    for (const auto &p : paths) {
+	for (const auto &p : paths) {
 		if (p->isInside(x, y)) {
-            return p;
-        }
+			return p;
+		}
 	}
-    return PathRef();
+	return PathRef();
 }
 
 void Graphics::setOrientation(ToveOrientation orientation) {
@@ -502,58 +442,15 @@ void Graphics::set(const GraphicsRef &source, const nsvg::Transform &transform) 
 	} else {
 		clipSet = ClipSetRef();
 	}
-	nsvg.clip.instances = clipSet ? clipSet->getHead() : nullptr;
+	nsvg.clipPaths = clipSet ? clipSet->getHead() : nullptr;
 #endif
 }
 
 ToveChangeFlags Graphics::fetchChanges(ToveChangeFlags flags) {
-    flags &= ~(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS);
+	flags &= ~(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS);
 	const ToveChangeFlags c = changes & flags;
 	changes &= ~flags;
 	return c;
-}
-
-bool Graphics::morphify(const std::vector<GraphicsRef> &graphics) {
-	if (graphics.size() < 2) {
-		return false;
-	}
-
-	const int n = graphics[0]->getNumPaths();
-	for (int i = 0; i < graphics.size(); i++) {
-		if (graphics[i]->getNumPaths() != n) {
-			return false;
-		}
-	}
-
-	std::vector<PathRef> paths;
-	paths.reserve(graphics.size());
-
-	for (int j = 0; j < n; j++) {
-		paths.clear();
-		for (int i = 0; i < graphics.size(); i++) {
-			paths.push_back(graphics[i]->getPath(j));
-		}
-		Path::morphify(paths);
-	}
-
-	return true;	
-}
-
-void Graphics::rotate(ToveElementType what, int k) {
-	switch (what) {
-		case TOVE_PATH: {
-			std::rotate(
-				paths.begin(),
-				paths.begin() + umod(k, paths.size()),
-				paths.end());
-		} break;
-
-		default: {
-			for (const auto &path : paths) {
-				path->rotate(what, k);
-			}
-		} break;
-	}
 }
 
 void Graphics::animate(const GraphicsRef &a, const GraphicsRef &b, float t) {
@@ -575,7 +472,7 @@ void Graphics::animate(const GraphicsRef &a, const GraphicsRef &b, float t) {
 		}
 	}
 	for (int i = 0; i < n; i++) {
-		paths[i]->animate(a->paths[i], b->paths[i], t, i);
+		paths[i]->animate(a->paths[i], b->paths[i], t);
 	}
 }
 
@@ -590,7 +487,7 @@ void Graphics::computeClipPaths(const AbstractTesselator &tess) const {
 }
 
 void Graphics::clearChanges(ToveChangeFlags flags) {
-	flags &= ~(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS | CHANGED_PAINT_INDICES);
+	flags &= ~(CHANGED_BOUNDS | CHANGED_EXACT_BOUNDS);
 	changes &= ~flags;
 }
 
